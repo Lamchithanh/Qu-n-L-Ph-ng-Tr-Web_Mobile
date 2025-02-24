@@ -1,0 +1,576 @@
+.profileContainer {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 1.5rem;
+}
+
+.header {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.headerContent {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.avatarSection {
+  position: relative;
+
+  &:hover .changePhotoButton {
+    opacity: 1;
+  }
+}
+
+.avatar {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #4f46e5;
+}
+
+.changePhotoButton {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4f46e5;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.userInfo {
+  flex: 1;
+  text-align: left;
+
+  @media (max-width: 768px) {
+    text-align: center;
+  }
+}
+
+.userName {
+  font-size: 1.875rem;
+  font-weight: bold;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.userRole {
+  color: #06b6d4;
+  font-weight: 500;
+  text-transform: capitalize;
+  margin-bottom: 1rem;
+}
+
+.quickStats {
+  display: flex;
+  gap: 1rem;
+  color: #4b5563;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    justify-content: center;
+  }
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: #4f46e5;
+  }
+}
+
+.statsCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.statCard {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  color: white;
+
+  &.primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  }
+
+  &.secondary {
+    background: linear-gradient(135deg, #06b6d4 0%, #4f46e5 100%);
+  }
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.875rem;
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: white;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.navContainer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  color: #6b7280;
+
+  &:hover {
+    background-color: #f3f4f6;
+    color: #4f46e5;
+  }
+}
+
+.activeNav {
+  background-color: #ede9fe;
+  color: #4f46e5;
+}
+
+.navIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.navLabel {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.activeIndicator {
+  position: absolute;
+  bottom: -0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5rem;
+  height: 0.25rem;
+  background-color: #4f46e5;
+  border-radius: 9999px;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tab {
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.3s;
+
+  &:hover {
+    background-color: #f3f4f6;
+  }
+
+  &.active {
+    background-color: #4f46e5;
+    color: white;
+  }
+}
+
+.editButton {
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  color: white;
+  transition: opacity 0.3s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &.cancel {
+    background: #e5e7eb;
+    color: #4b5563;
+  }
+}
+
+.saveButton {
+  background-color: #4f46e5;
+  color: white;
+  transition: 0.3s ease-in-out;
+  border: 1px solid #4f46e5;
+
+  &:hover {
+    background-color: white;
+    color: #4f46e5;
+  }
+}
+
+.content {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fieldGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.fieldIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #4f46e5;
+  margin-top: 0.25rem;
+}
+
+.fieldContent {
+  flex: 1;
+}
+
+.fieldLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.fieldValue {
+  color: #111827;
+}
+
+.fieldInput {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  margin-top: 0.25rem;
+
+  &:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+  }
+}
+
+.rentalList {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.rentalCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rentalContent {
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.roomNumber {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+
+  &.current {
+    background-color: #ede9fe;
+    color: #4f46e5;
+  }
+
+  &.past {
+    background-color: #f3f4f6;
+    color: #6b7280;
+  }
+}
+
+.rentalInfo {
+  flex: 1;
+}
+
+.rentalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.rentalTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rentalPeriod {
+  color: #6b7280;
+}
+
+.rentalStatus {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &.current {
+    background-color: #ede9fe;
+    color: #4f46e5;
+  }
+
+  &.past {
+    background-color: #f3f4f6;
+    color: #6b7280;
+  }
+}
+
+.rentalDetails {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.detailItem {
+  span {
+    display: block;
+
+    &:first-child {
+      color: #6b7280;
+    }
+
+    &:last-child {
+      font-weight: 500;
+      color: #111827;
+    }
+  }
+}
+
+.paymentsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paymentChart {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.chartTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.chartContainer {
+  height: 16rem;
+}
+
+.chartLegend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legendDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+
+  &.onTime {
+    background-color: #4f46e5;
+  }
+
+  &.late {
+    background-color: #ef4444;
+  }
+}
+
+.invoiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.invoiceCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.invoiceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.invoiceMonth {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.invoiceStatus {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &.paid {
+    background-color: #dcfce7;
+    color: #16a34a;
+  }
+
+  &.pending {
+    background-color: #fef3c7;
+    color: #d97706;
+  }
+}
+
+.invoiceAmount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4f46e5;
+  margin-bottom: 1rem;
+}
+
+.invoiceBreakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.breakdownItem {
+  span {
+    display: block;
+
+    &:first-child {
+      color: #6b7280;
+      text-transform: capitalize;
+    }
+
+    &:last-child {
+      font-weight: 500;
+      color: #111827;
+    }
+  }
+}
+
+.invoiceDates {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #6b7280;
+
+  span:last-child {
+    color: #111827;
+  }
+}
+.actionButtonsContainer {
+  margin-top: 2rem;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+  }
+}
+
+.primaryButton {
+  background: linear-gradient(45deg, #4f46e5, #06b6d4);
+  color: white;
+
+  &:hover {
+    background: linear-gradient(45deg, #4338ca, #0891b2);
+  }
+}
+
+.buttonIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}

@@ -1,0 +1,217 @@
+// // @import "../../Style/variables.scss";
+
+// .modalOverlay {
+//   position: fixed;
+//   top: 0;
+//   left: 0;
+//   width: 100%;
+//   height: 100%;
+//   background: rgba(0, 0, 0, 0.5);
+//   display: flex;
+//   justify-content: center;
+//   align-items: center;
+//   z-index: 1000;
+//   padding: 20px;
+// }
+
+// .modalContent {
+//   background: white;
+//   border-radius: 12px;
+//   width: 100%;
+//   max-width: 600px;
+//   max-height: 90vh;
+//   overflow-y: auto;
+//   position: relative;
+//   padding: 24px;
+//   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+// }
+
+// .closeButton {
+//   position: absolute;
+//   top: 16px;
+//   right: 16px;
+//   background: none;
+//   border: none;
+//   // color: $text-gray;
+//   cursor: pointer;
+//   transition: color 0.3s ease;
+
+//   &:hover {
+//     color: $primary-color;
+//   }
+// }
+
+// .modalHeader {
+//   display: flex;
+//   align-items: center;
+//   margin-bottom: 24px;
+
+//   .headerIcon {
+//     margin-right: 12px;
+//     color: $primary-color;
+//     width: 28px;
+//     height: 28px;
+//   }
+
+//   h2 {
+//     margin: 0;
+//     font-size: 1.5rem;
+//     color: $text-gray-dark;
+//     font-weight: 600;
+//   }
+// }
+
+// .detailSection {
+//   margin-bottom: 24px;
+//   padding-bottom: 16px;
+//   border-bottom: 1px solid $border-light;
+
+//   h3 {
+//     font-size: 1.2rem;
+//     color: $text-gray-dark;
+//     margin-bottom: 16px;
+//     padding-left: 8px;
+//     border-left: 4px solid $primary-color;
+//   }
+// }
+
+// .detailGrid {
+//   display: grid;
+//   grid-template-columns: repeat(2, 1fr);
+//   gap: 16px;
+
+//   @media (max-width: 480px) {
+//     grid-template-columns: 1fr;
+//   }
+// }
+
+// .detailItem {
+//   display: flex;
+//   align-items: center;
+//   background-color: $background-light;
+//   padding: 12px;
+//   border-radius: 8px;
+
+//   svg {
+//     margin-right: 12px;
+//     color: $primary-color;
+//     width: 24px;
+//     height: 24px;
+//   }
+
+//   .detailLabel {
+//     display: block;
+//     // color: $text-gray;
+//     font-size: 0.9rem;
+//     margin-bottom: 4px;
+//   }
+
+//   .detailValue {
+//     font-weight: 600;
+//     color: $text-gray-dark;
+//   }
+// }
+
+// .contractDetails {
+//   background-color: $background-light;
+//   border-radius: 8px;
+//   padding: 16px;
+// }
+
+// .contractItem {
+//   display: flex;
+//   justify-content: space-between;
+//   align-items: center;
+//   padding: 10px 0;
+//   border-bottom: 1px solid $border-light;
+
+//   &:last-child {
+//     border-bottom: none;
+//   }
+
+//   .statusBadge {
+//     padding: 4px 8px;
+//     border-radius: 4px;
+//     font-size: 0.8rem;
+//     font-weight: 600;
+
+//     &.current {
+//       background-color: rgba($primary-color, 0.1);
+//       color: $primary-color;
+//     }
+
+//     &.past {
+//       background-color: rgba(#6b7280, 0.1);
+//       color: #6b7280;
+//     }
+//   }
+// }
+
+// .utilitySection {
+//   background-color: $background-light;
+//   border-radius: 8px;
+//   padding: 16px;
+// }
+
+// .utilityItem {
+//   display: flex;
+//   align-items: center;
+//   margin-bottom: 10px;
+
+//   &:last-child {
+//     margin-bottom: 0;
+//   }
+
+//   svg {
+//     margin-right: 12px;
+//     color: $primary-color;
+//     width: 20px;
+//     height: 20px;
+//   }
+// }
+
+// .actionButtons {
+//   display: flex;
+//   justify-content: space-between;
+//   margin-top: 24px;
+
+//   .primaryButton,
+//   .secondaryButton {
+//     flex: 1;
+//     padding: 12px;
+//     border-radius: 8px;
+//     font-weight: 600;
+//     transition: all 0.3s ease;
+//   }
+
+//   .primaryButton {
+//     background-color: $primary-color;
+//     color: white;
+//     margin-right: 12px;
+//     border: 2px solid $primary-color;
+
+//     &:hover {
+//       background-color: darken($primary-color, 10%);
+//     }
+//   }
+
+//   .secondaryButton {
+//     background-color: white;
+//     color: $primary-color;
+//     border: 2px solid $primary-color;
+
+//     &:hover {
+//       background-color: rgba($primary-color, 0.05);
+//     }
+//   }
+
+//   @media (max-width: 480px) {
+//     flex-direction: column;
+
+//     .primaryButton,
+//     .secondaryButton {
+//       margin-right: 0;
+//       margin-bottom: 12px;
+//     }
+//   }
+// }

@@ -1,0 +1,22 @@
+.mainLayout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; // Chiều cao tối thiểu 100% màn hình
+}
+
+.header {
+  position: fixed; // Cố định Header ở trên cùng
+  top: 0; // Đặt Header ở đầu trang
+  left: 0;
+  width: 100%; // Đảm bảo Header chiếm chiều rộng đầy đủ
+  z-index: 1000; // Đảm bảo Header luôn trên các phần tử khác
+}
+
+.main {
+  flex: 1; // Tự động mở rộng để đẩy Footer xuống dưới
+  padding-top: 8%; // Thêm khoảng trống để không bị đè lên Header
+}
+
+.footer {
+  margin-top: auto; // Đảm bảo Footer luôn ở dưới cùng
+}

@@ -1,0 +1,479 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f3f4f6, #ffffff);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  max-width: 800px;
+  width: 100%;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(45deg, #4f46e5, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.steps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+
+    .stepIcon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+    }
+
+    &.completed {
+      color: #10b981;
+
+      .stepIcon {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+      }
+    }
+
+    &.active {
+      color: #4f46e5;
+
+      .stepIcon {
+        background: rgba(79, 70, 229, 0.1);
+        color: #4f46e5;
+      }
+    }
+
+    svg {
+      color: #cbd5e1;
+    }
+  }
+}
+
+.summary {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+  .orderInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .detail {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+
+      span {
+        color: #64748b;
+      }
+
+      strong {
+        color: #1e293b;
+      }
+
+      &.amount {
+        font-size: 1.25rem;
+        color: #4f46e5;
+      }
+    }
+  }
+
+  .detailsToggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.05);
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.1);
+    }
+  }
+
+  .detailsContent {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #e2e8f0;
+
+    .detailRow {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+
+      span {
+        color: #64748b;
+      }
+
+      strong {
+        color: #1e293b;
+      }
+    }
+  }
+}
+
+.methodsSection {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 1rem;
+  }
+}
+
+.methods {
+  display: grid;
+  gap: 1rem;
+}
+
+.methodCard {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    border-color: #4f46e5;
+    background: rgba(79, 70, 229, 0.02);
+  }
+
+  .methodHeader {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    .methodIcon {
+      width: 48px;
+      height: 48px;
+      border-radius: 0.75rem;
+      background: rgba(79, 70, 229, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4f46e5;
+    }
+
+    .methodInfo {
+      flex: 1;
+
+      h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+      }
+
+      p {
+        color: #64748b;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  .methodDetails {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #e2e8f0;
+
+    .bankInfo {
+      display: grid;
+      gap: 0.75rem;
+
+      .bankActions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+
+        .qrToggleBtn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: #f1f5f9;
+          color: #4f46e5;
+          border: 1px solid #e2e8f0;
+          border-radius: 0.5rem;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background: #e2e8f0;
+          }
+
+          &.active {
+            background: rgba(79, 70, 229, 0.1);
+            border-color: #4f46e5;
+          }
+        }
+      }
+
+      .qrCodeContainer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: 0.75rem;
+        margin: 1rem 0;
+
+        .qrImage {
+          width: 200px;
+          height: 200px;
+          object-fit: contain;
+          margin-bottom: 1rem;
+          border-radius: 0.5rem;
+          padding: 0.5rem;
+          background: white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .qrNote {
+          text-align: center;
+          color: #64748b;
+          font-size: 0.875rem;
+          max-width: 80%;
+          line-height: 1.5;
+        }
+      }
+
+      .bankDetail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        span {
+          color: #64748b;
+        }
+
+        strong {
+          color: #1e293b;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .methodCard {
+    .methodDetails {
+      .bankInfo {
+        .qrCodeContainer {
+          padding: 1rem;
+
+          .qrImage {
+            width: 160px;
+            height: 160px;
+          }
+
+          .qrNote {
+            max-width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  button {
+    flex: 1;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+
+  .cancelBtn {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+
+    &:hover:not(:disabled) {
+      background: #e2e8f0;
+    }
+  }
+
+  .confirmBtn {
+    background: linear-gradient(45deg, #4f46e5, #06b6d4);
+    color: white;
+    border: none;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+  }
+}
+
+.notice {
+  background: #fffbeb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+
+  svg {
+    color: #d97706;
+    flex-shrink: 0;
+  }
+
+  p {
+    color: #92400e;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    h1 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    .step {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+
+  .summary {
+    .orderInfo {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .methodCard {
+    .methodHeader {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+
+      .methodIcon {
+        margin: 0 auto;
+      }
+    }
+  }
+}
+
+.transferNote {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+
+  h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+
+  .noteContent {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    code {
+      flex: 1;
+      padding: 0.5rem;
+      background: #f1f5f9;
+      border-radius: 0.25rem;
+      font-family: monospace;
+      color: #4f46e5;
+    }
+
+    .copyBtn {
+      padding: 0.25rem 0.75rem;
+      background: #4f46e5;
+      color: white;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+
+      &:hover {
+        background: #4338ca;
+      }
+    }
+  }
+
+  .noteText {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+}

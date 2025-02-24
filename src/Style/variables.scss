@@ -1,0 +1,53 @@
+// colors.scss
+$primary-color: #4299e1;
+$primary-color-dark: #2c5282;
+$secondary-color: #718096;
+$background-light: #f9fafb;
+$text-dark: #2d3748;
+$text-light: #a0aec0;
+
+// breakpoints
+$breakpoint-mobile: 480px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
+
+// shadows
+$box-shadow-light: 0 10px 25px rgba(0, 0, 0, 0.05);
+$box-shadow-medium: 0 15px 30px rgba(0, 0, 0, 0.1);
+
+// typography
+$font-base: "Inter", "Roboto", sans-serif;
+$font-size-base: 16px;
+
+// transitions
+$transition-base: all 0.3s ease;
+
+// border radius
+$border-radius-base: 12px;
+$border-radius-small: 8px;
+
+// gradient
+$gradient-primary: linear-gradient(
+  to right,
+  $primary-color,
+  $primary-color-dark
+);
+
+// Responsive Mixins
+@mixin mobile {
+  @media (max-width: #{$breakpoint-mobile}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: #{$breakpoint-tablet}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{$breakpoint-desktop}) {
+    @content;
+  }
+}
