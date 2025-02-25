@@ -102,7 +102,7 @@ const Header = () => {
       },
     ];
 
-    if (userInfo.role === "staff") {
+    if (userInfo.role === "landlord_pending") {
       return [
         {
           to: "/TenantManagement",

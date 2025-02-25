@@ -9,6 +9,16 @@ import Toast from "./Frontend/components/Toast";
 import MainLayout from "./Frontend/layouts/MainLayout";
 import PageLoader from "./Frontend/components/PageLoader";
 import { ChatProvider } from "./Frontend/Contexts/ChatContext";
+import DashboardLayout from "./Frontend/pages/Landlord/DashboardLayout.jsx";
+import DashboardOverview from "./Frontend/pages/Landlord/DashboardOverview.jsx";
+import LandlordProfile from "./Frontend/pages/Landlord/LandlordProfile.jsx";
+import RoomsManagement from "./Frontend/pages/Landlord/RoomsManagement.jsx";
+import ContractsManagement from "./Frontend/pages/Landlord/ContractsManagement.jsx";
+import ServicesManagement from "./Frontend/pages/Landlord/ServicesManagement.jsx";
+import InvoicesManagement from "./Frontend/pages/Landlord/InvoicesManagement.jsx";
+import PaymentsManagement from "./Frontend/pages/Landlord/PaymentsManagement.jsx";
+import ReviewsManagement from "./Frontend/pages/Landlord/ReviewsManagement.jsx";
+import DashboardSettings from "./Frontend/pages/Landlord/DashboardSettings.jsx";
 
 // Lazy load components với prefetch
 const Homepage = lazy(() => import("./Frontend/pages/HomePage"));
@@ -103,6 +113,26 @@ const App = () => {
                     path="/register-landlord"
                     element={<LandlordRegistration />}
                   />
+
+                  {/* Dashboard routes */}
+                  <Route path="/dashboard" element={<DashboardLayout />}>
+                    <Route index element={<DashboardOverview />} />
+                    <Route
+                      path="LandlordProfile"
+                      element={<LandlordProfile />}
+                    />
+                    <Route
+                      path="RoomsManagement"
+                      element={<RoomsManagement />}
+                    />
+
+                    <Route path="contracts" element={<ContractsManagement />} />
+                    <Route path="services" element={<ServicesManagement />} />
+                    <Route path="invoices" element={<InvoicesManagement />} />
+                    <Route path="payments" element={<PaymentsManagement />} />
+                    <Route path="reviews" element={<ReviewsManagement />} />
+                    <Route path="settings" element={<DashboardSettings />} />
+                  </Route>
                 </Routes>
               </Suspense>
             </NavigationTracker>

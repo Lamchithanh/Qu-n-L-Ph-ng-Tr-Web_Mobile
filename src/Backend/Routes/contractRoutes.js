@@ -9,7 +9,7 @@ import {
   signContract,
   updateTenantInfo,
   getContractServiceUsages,
-} from "../controllers/contractController.js";
+} from "../Controllers/contractController.js";
 import { authenticateToken } from "../Middleware/Middleware.js";
 
 const router = express.Router();
