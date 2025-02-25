@@ -71,7 +71,7 @@ const App = () => {
                     <Route path="/ProfilePage" element={<ProfilePage />} />
                     <Route path="/BillPayment" element={<BillPayment />} />
                     <Route
-                      path="/RentalContract"
+                      path="/RentalContract/:id"
                       element={<RentalContract />}
                     />
                     <Route path="/ContactPage" element={<ContactPage />} />

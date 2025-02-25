@@ -24,18 +24,27 @@ export const getAllRooms = async (req, res) => {
     // Format dữ liệu để phù hợp với frontend
     const formattedRooms = rooms.map((room) => ({
       ...room,
-      price: new Intl.NumberFormat("vi-VN").format(room.price),
+      // Cập nhật định dạng giá
+      price: room.price
+        ? parseFloat(room.price).toLocaleString("vi-VN")
+        : "Chưa cập nhật",
+      // Phần còn lại giữ nguyên
       images: room.images
         ? typeof room.images === "string"
           ? JSON.parse(room.images)
           : room.images
-        : null,
+        : [],
       facilities: room.facilities
         ? typeof room.facilities === "string"
           ? JSON.parse(room.facilities)
           : room.facilities
         : [],
       tags: room.status === "available" ? ["Còn trống"] : [],
+      amenities: room.facilities
+        ? typeof room.facilities === "string"
+          ? JSON.parse(room.facilities)
+          : room.facilities
+        : [],
     }));
 
     res.status(200).json({
@@ -114,18 +123,27 @@ export const getRoomsByFilters = async (req, res) => {
     // Format dữ liệu để phù hợp với frontend
     const formattedRooms = rooms.map((room) => ({
       ...room,
-      price: new Intl.NumberFormat("vi-VN").format(room.price),
+      // Cập nhật định dạng giá
+      price: room.price
+        ? parseFloat(room.price).toLocaleString("vi-VN")
+        : "Chưa cập nhật",
+      // Phần còn lại giữ nguyên
       images: room.images
         ? typeof room.images === "string"
           ? JSON.parse(room.images)
           : room.images
-        : null,
+        : [],
       facilities: room.facilities
         ? typeof room.facilities === "string"
           ? JSON.parse(room.facilities)
           : room.facilities
         : [],
       tags: room.status === "available" ? ["Còn trống"] : [],
+      amenities: room.facilities
+        ? typeof room.facilities === "string"
+          ? JSON.parse(room.facilities)
+          : room.facilities
+        : [],
     }));
 
     res.status(200).json({
@@ -146,24 +164,56 @@ export const getRoomById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = `
+    // Truy vấn thông tin phòng cơ bản - đã loại bỏ discounted_price và tham chiếu đến bảng reviews
+    const roomQuery = `
       SELECT 
-        id, 
-        title, 
-        address, 
-        price, 
-        area, 
-        status, 
-        description,
-        facilities, 
-        images, 
-        rating, 
-        review_count
-      FROM rooms
-      WHERE id = ? AND deleted_at IS NULL
+        r.id, 
+        r.title, 
+        r.address, 
+        r.room_number,
+        r.floor,
+        r.price as original_price,
+        r.price as current_price, 
+        r.area, 
+        r.status, 
+        r.description,
+        r.facilities, 
+        r.images, 
+        r.rating,
+        r.review_count,
+        (
+          SELECT COUNT(*) 
+          FROM rooms 
+          WHERE status = 'available' AND deleted_at IS NULL
+        ) as available_rooms,
+        COALESCE(r.current_views, 0) as current_views,
+        u.phone as contact_phone,
+        u.email as contact_email,
+        l.id as landlord_id,
+        l.description as landlord_description,
+        (
+          SELECT COUNT(*) > 0 
+          FROM user_favorites uf 
+          WHERE uf.room_id = r.id AND uf.user_id = ? AND uf.deleted_at IS NULL
+        ) as is_favorite
+      FROM rooms r
+      LEFT JOIN landlords l ON r.landlord_id = l.id
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE r.id = ? AND r.deleted_at IS NULL
     `;
 
-    const rooms = await executeQuery(query, [id]);
+    // Cập nhật lượt xem phòng
+    const updateViewsQuery = `
+      UPDATE rooms 
+      SET current_views = COALESCE(current_views, 0) + 1 
+      WHERE id = ?
+    `;
+
+    await executeQuery(updateViewsQuery, [id]);
+
+    // Truyền user_id nếu có (từ JWT), nếu không thì truyền 0
+    const userId = req.user ? req.user.id : 0;
+    const rooms = await executeQuery(roomQuery, [userId, id]);
 
     if (rooms.length === 0) {
       return res.status(404).json({
@@ -172,34 +222,181 @@ export const getRoomById = async (req, res) => {
       });
     }
 
-    const room = rooms[0];
+    // Truy vấn tiện nghi phòng từ bảng amenities
+    const amenitiesQuery = `
+      SELECT 
+        a.id,
+        a.name,
+        a.icon
+      FROM room_amenity_relations rar
+      JOIN amenities a ON rar.amenity_id = a.id
+      WHERE rar.room_id = ?
+    `;
 
-    // Format dữ liệu để phù hợp với frontend
-    const formattedRooms = rooms.map((room) => ({
-      ...room,
-      price: new Intl.NumberFormat("vi-VN").format(room.price),
-      images: room.images
-        ? typeof room.images === "string"
-          ? JSON.parse(room.images)
-          : room.images
-        : null,
-      facilities: room.facilities
-        ? typeof room.facilities === "string"
-          ? JSON.parse(room.facilities)
-          : room.facilities
-        : [],
-      tags: room.status === "available" ? ["Còn trống"] : [],
-    }));
+    const amenitiesList = await executeQuery(amenitiesQuery, [id]);
 
-    res.status(200).json({
-      success: true,
-      data: formattedRoom,
-    });
+    // Lấy thông tin từ bảng contracts
+    const roomData = rooms[0];
+
+    // Parse JSON fields
+    const images = roomData.images
+      ? typeof roomData.images === "string"
+        ? JSON.parse(roomData.images)
+        : roomData.images
+      : [];
+
+    const facilities = roomData.facilities
+      ? typeof roomData.facilities === "string"
+        ? JSON.parse(roomData.facilities)
+        : roomData.facilities
+      : {};
+
+    // Xử lý các tiện ích cơ bản từ facilities
+    const basicAmenities = [];
+    if (facilities.fridge)
+      basicAmenities.push({ name: "Tủ lạnh", icon: "fridge" });
+    if (facilities.air_con)
+      basicAmenities.push({ name: "Điều hòa", icon: "air_con" });
+    if (facilities.water_heater)
+      basicAmenities.push({ name: "Máy nước nóng", icon: "water_heater" });
+
+    // Thêm các tiện ích từ bảng amenities
+    const allAmenities = [
+      ...basicAmenities,
+      ...amenitiesList.map((item) => ({ name: item.name, icon: item.icon })),
+    ];
+
+    // Lấy thông tin cơ sở lân cận từ JSON
+    const nearbyFacilities = {};
+    if (facilities.nearby_facilities) {
+      Object.entries(facilities.nearby_facilities).forEach(([key, value]) => {
+        nearbyFacilities[key] = {
+          name: key,
+          distance: value.distance || "Đang cập nhật",
+          description: value.description || "",
+        };
+      });
+    }
+
+    // Định dạng dữ liệu phù hợp với component frontend
+    if (roomData) {
+      // Tính giá khuyến mãi giả lập để phù hợp với giao diện hiển thị
+      const originalPrice = parseInt(roomData.original_price || 0);
+      const currentPrice = originalPrice * 0.9; // Giả lập giảm giá 10%
+
+      const formattedRoom = {
+        id: roomData.id,
+        title: roomData.title,
+        room_number: roomData.room_number,
+        floor: roomData.floor,
+        available_rooms: roomData.available_rooms || 0,
+        current_views: roomData.current_views || 0,
+        is_favorite: roomData.is_favorite || false,
+        location: {
+          address: roomData.address,
+          nearby_facilities: nearbyFacilities,
+        },
+        details: {
+          area: roomData.area,
+          description: roomData.description,
+          status: roomData.status,
+        },
+        amenities: allAmenities,
+        images: images,
+        pricing: {
+          original_price: originalPrice,
+          current_price: currentPrice,
+          promotion: {
+            description: `Giảm ${parseInt(
+              originalPrice - currentPrice
+            ).toLocaleString("vi-VN")}đ khi đặt phòng trong tuần này!`,
+          },
+        },
+        contact: {
+          phone: roomData.contact_phone,
+          email: roomData.contact_email,
+          landlord_id: roomData.landlord_id,
+          landlord_description: roomData.landlord_description,
+        },
+        ratings: {
+          average:
+            roomData.rating > 0
+              ? parseFloat(roomData.rating).toFixed(1)
+              : "Chưa có đánh giá",
+          total_reviews: roomData.review_count || 0,
+          recent_reviews: [], // Tạm thời để trống vì chưa có bảng reviews
+        },
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: formattedRoom,
+      });
+    } else {
+      // Định nghĩa formattedRoom cho trường hợp không có roomData
+      const formattedRoom = {
+        id: null,
+        title: "Không có thông tin",
+        room_number: "",
+        floor: 0,
+        available_rooms: 0,
+        current_views: 0,
+        is_favorite: false,
+        location: {
+          address: "Không có địa chỉ",
+          nearby_facilities: {},
+        },
+        details: {
+          area: 0,
+          description: "Không có mô tả",
+          status: "unavailable",
+        },
+        amenities: [],
+        images: [],
+        pricing: {
+          original_price: 0,
+          current_price: 0,
+          promotion: null,
+        },
+        contact: {
+          phone: "Không có số điện thoại",
+          email: "Không có email",
+          landlord_id: null,
+          landlord_description: "",
+        },
+        ratings: {
+          average: "Chưa có đánh giá",
+          total_reviews: 0,
+          recent_reviews: [],
+        },
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: formattedRoom,
+      });
+    }
   } catch (error) {
     console.error("Error fetching room details:", error);
     res.status(500).json({
       success: false,
       message: "Không thể lấy thông tin phòng",
+      error: error.message,
+    });
+  }
+};
+
+export const toggleFavorite = async (req, res) => {
+  try {
+    return res.status(503).json({
+      success: false,
+      message: "Tính năng đánh dấu yêu thích tạm thời không khả dụng",
+    });
+  } catch (error) {
+    console.error("Error toggling favorite:", error);
+    res.status(500).json({
+      success: false,
+      message: "Không thể thay đổi trạng thái yêu thích",
       error: error.message,
     });
   }

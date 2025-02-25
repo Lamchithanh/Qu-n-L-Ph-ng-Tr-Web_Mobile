@@ -3,6 +3,7 @@ import express from "express";
 import {
   getAllRooms,
   getRoomById,
+  toggleFavorite,
   createRoom,
   updateRoom,
   deleteRoom,
@@ -29,5 +30,6 @@ router.post("/create", authenticateToken, createRoom);
 router.put("/update/:id", authenticateToken, updateRoom);
 // router.put("/status/:id", authenticateToken, updateRoomStatus);
 router.delete("/delete/:id", authenticateToken, deleteRoom);
+router.post("/:id/toggle-favorite", authenticateToken, toggleFavorite);
 
 export default router;

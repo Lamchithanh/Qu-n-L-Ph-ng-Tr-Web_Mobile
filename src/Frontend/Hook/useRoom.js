@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { CONFIG } from "../config/config";
+import roomService from "../Service/roomService.js";
 
 export const useRoom = (roomId) => {
   const [room, setRoom] = useState(null);
@@ -8,35 +7,53 @@ export const useRoom = (roomId) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchRoom = async () => {
+    const fetchRoomData = async () => {
       try {
-        const response = await axios.get(`${CONFIG.API_URL}/rooms/${roomId}`);
-        if (response.data.success) {
-          setRoom(response.data.data);
-          // Increment view count
-          await axios.post(`${CONFIG.API_URL}/rooms/${roomId}/views`);
+        setLoading(true);
+        const response = await roomService.getRoomById(roomId);
+        if (response.success) {
+          setRoom(response.data);
         } else {
-          setError(response.data.message);
+          setError(response.message || "Không thể lấy thông tin phòng");
         }
       } catch (err) {
-        setError(err.response?.data?.message || err.message);
+        setError(err.message || "Không thể kết nối đến server");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRoom();
+    if (roomId) {
+      fetchRoomData();
+    }
   }, [roomId]);
 
   const toggleFavorite = async () => {
     try {
-      const response = await axios.post(
-        `${CONFIG.API_URL}/rooms/${roomId}/favorite`
-      );
-      return response.data;
+      // Kiểm tra đăng nhập
+      const token = localStorage.getItem("token");
+      if (!token) {
+        // Chuyển hướng tới trang đăng nhập hoặc hiển thị thông báo
+        return false;
+      }
+
+      // Gọi API toggle favorite
+      const response = await roomService.toggleFavorite(roomId);
+
+      if (response.success) {
+        // Cập nhật state
+        setRoom((prev) => ({
+          ...prev,
+          is_favorite: !prev.is_favorite,
+        }));
+        return true;
+      } else {
+        setError(response.message || "Không thể thay đổi trạng thái yêu thích");
+        return false;
+      }
     } catch (err) {
-      console.error("Error toggling favorite:", err);
-      throw err;
+      setError("Không thể thay đổi trạng thái yêu thích");
+      return false;
     }
   };
 

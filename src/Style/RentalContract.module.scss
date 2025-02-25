@@ -363,6 +363,32 @@
       }
     }
   }
+
+  .discountNote {
+    font-size: 0.8em;
+    color: #16a34a;
+    margin-left: 0.5rem;
+  }
+
+  .usageDetails {
+    font-size: 0.8em;
+    color: #6b7280;
+    margin-left: 0.5rem;
+  }
+
+  .serviceItem {
+    .usageDetails {
+      font-size: 0.8em;
+      color: #6b7280;
+      margin-left: 0.5rem;
+    }
+
+    .priceUnit {
+      font-size: 0.8em;
+      color: #6b7280;
+      margin-left: 0.25rem;
+    }
+  }
 }
 
 .actions {

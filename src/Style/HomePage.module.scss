@@ -244,11 +244,15 @@
     }
 
     .tags {
-      position: absolute;
-      top: 1rem;
-      left: 1rem;
-      display: flex;
-      gap: 0.5rem;
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: linear-gradient(45deg, #4f46e5, #06b6d4);
+      color: white !important;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      position: relative;
+      z-index: 10;
 
       span {
         padding: 0.25rem 0.75rem;

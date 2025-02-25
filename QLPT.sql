@@ -43,10 +43,13 @@ CREATE TABLE rooms (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
+    landlord_id INT NULL,
     room_number VARCHAR(20) UNIQUE NOT NULL,
     floor INT,
     area DECIMAL(10,2),
-    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+    -- Thay đổi từ DECIMAL(10,2) thành DECIMAL(15,0) để lưu trữ số nguyên
+    price DECIMAL(15,0) NOT NULL CHECK (price >= 0),
+    discounted_price DECIMAL(15,2) NULL,
     status ENUM('available', 'occupied', 'maintenance') DEFAULT 'available',
     description TEXT,
     facilities JSON DEFAULT NULL,
@@ -57,15 +60,24 @@ CREATE TABLE rooms (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
-
     INDEX idx_room_status (status),
     INDEX idx_room_price (price),
     INDEX idx_room_floor (floor),
     INDEX idx_deleted_at (deleted_at)
 );
 
+
+CREATE TABLE user_favorites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  room_id BIGINT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted_at DATETIME DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (room_id) REFERENCES rooms(id)
+);
+
 -- Thêm CHECK CONSTRAINT nếu chưa có
-ALTER TABLE rooms MODIFY COLUMN price DECIMAL(10,2) NOT NULL CHECK (price >= 0);
 ALTER TABLE rooms MODIFY COLUMN rating DECIMAL(2,1) DEFAULT 0 CHECK (rating BETWEEN 0 AND 5);
 ALTER TABLE rooms MODIFY COLUMN review_count INT DEFAULT 0 CHECK (review_count >= 0);
 ALTER TABLE rooms MODIFY COLUMN current_views INT DEFAULT 0 CHECK (current_views >= 0);
@@ -80,7 +92,18 @@ CREATE INDEX idx_room_price ON rooms(price);
 CREATE INDEX idx_room_floor ON rooms(floor);
 CREATE INDEX idx_deleted_at ON rooms(deleted_at);
 
-
+CREATE TABLE reviews (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  room_id BIGINT NOT NULL,
+  rating DECIMAL(3,1) NOT NULL,
+  review TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (room_id) REFERENCES rooms(id)
+);
 
 CREATE INDEX idx_rooms_status ON rooms(status);
 CREATE INDEX idx_rooms_price ON rooms(price);

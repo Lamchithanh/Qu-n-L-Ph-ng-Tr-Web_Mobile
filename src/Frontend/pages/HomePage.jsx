@@ -21,7 +21,7 @@ import MobileApp from "../../assets/Mobile_App.jpg";
 import RoomCard from "../components/RoomCard";
 import roomService from "../Service/roomService.js";
 import { useToast } from "../Contexts/ToastContext";
-import { CONFIG } from "../config/config";
+import DefaultRoomImage from "../../assets/home_img.jpg"; // Add this import
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -41,49 +41,22 @@ const HomePage = () => {
 
   const fetchFeaturedRooms = async () => {
     try {
-      console.log("Fetching rooms from URL:", `${CONFIG.API_URL}/rooms`);
+      const response = await roomService.getRooms();
 
-      const response = await fetch(`${CONFIG.API_URL}/rooms`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Full Response Status:", response.status);
-      console.log(
-        "Full Response Headers:",
-        Object.fromEntries(response.headers.entries())
-      );
-
-      // Kiểm tra status
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error Response Full Text:", errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Parse JSON
-      const data = await response.json();
-      console.log("Parsed Data Full:", data);
-
-      // Kiểm tra cấu trúc dữ liệu
-      const formattedRooms = data.data.map((room) => {
-        // Log từng phòng để kiểm tra
-        console.log("Raw Room:", room);
-
-        return {
+      if (response.success) {
+        const formattedRooms = response.data.map((room) => ({
           id: room.id,
-          title: room.title,
-          address: room.address,
-          price: new Intl.NumberFormat("vi-VN").format(room.price),
-          area: room.area,
-          // Xử lý images đa dạng
+          title: room.title || "Phòng chưa có tên",
+          address: room.address || "Địa chỉ chưa cập nhật",
+          price: room.price
+            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
+            : "Chưa cập nhật",
+          area: room.area || "Chưa có",
           images: Array.isArray(room.images)
-            ? room.images[0]
+            ? room.images[0] || DefaultRoomImage
             : typeof room.images === "string"
-            ? JSON.parse(room.images)[0]
-            : null,
+            ? JSON.parse(room.images)[0] || DefaultRoomImage
+            : DefaultRoomImage,
           amenities: Array.isArray(room.facilities)
             ? room.facilities
             : typeof room.facilities === "string"
@@ -91,11 +64,12 @@ const HomePage = () => {
             : [],
           rating: room.rating || 0,
           reviews: room.review_count || 0,
+          status: room.status,
           tags: room.status === "available" ? ["Còn trống"] : [],
-        };
-      });
+        }));
 
-      setFeaturedRooms(formattedRooms);
+        setFeaturedRooms(formattedRooms);
+      }
     } catch (err) {
       console.error("Detailed Fetch Error:", {
         message: err.message,
@@ -120,19 +94,32 @@ const HomePage = () => {
         status: "available",
       };
       const response = await roomService.getRoomsByFilters(filters);
+
       if (response.success) {
         const formattedRooms = response.data.map((room) => ({
           id: room.id,
-          title: room.title,
-          address: room.address,
-          price: new Intl.NumberFormat("vi-VN").format(room.price),
-          area: room.area,
-          images: JSON.parse(room.images)[0],
-          amenities: JSON.parse(room.facilities),
+          title: room.title || "Phòng chưa có tên",
+          address: room.address || "Địa chỉ chưa cập nhật",
+          price: room.price
+            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
+            : "Chưa cập nhật",
+          area: room.area || "Chưa có",
+          images: Array.isArray(room.images)
+            ? room.images[0] || DefaultRoomImage
+            : typeof room.images === "string"
+            ? JSON.parse(room.images)[0] || DefaultRoomImage
+            : DefaultRoomImage,
+          amenities: Array.isArray(room.facilities)
+            ? room.facilities
+            : typeof room.facilities === "string"
+            ? JSON.parse(room.facilities)
+            : [],
           rating: room.rating || 0,
           reviews: room.review_count || 0,
+          status: room.status,
           tags: room.status === "available" ? ["Còn trống"] : [],
         }));
+
         setFeaturedRooms(formattedRooms);
       }
     } catch (err) {

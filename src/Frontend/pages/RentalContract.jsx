@@ -34,77 +34,8 @@ const RentalContract = () => {
   const [expandedTerms, setExpandedTerms] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedInfo, setEditedInfo] = useState(null);
-
-  // Mock data - Thay thế bằng API call trong thực tế
-  const contractInfo = {
-    id: "HD2024-0123",
-    status: "pending",
-    startDate: "2024-03-01",
-    endDate: "2025-03-01",
-    room: {
-      name: "Phòng trọ cao cấp Central Plaza",
-      address: "123 Nguyễn Văn A, Quận 1, TP.HCM",
-      type: "Căn hộ mini",
-      area: "35m²",
-      image:
-        "https://www.treehugger.com/thmb/kRiHvAQ9O1FIcHDuRtYm0xw8MsI=/2250x0/filters:no_upscale():max_bytes(150000):strip_icc()/kay-tiny-house-mitchcraft-tiny-homes-2-1fa157dd68144e018300bcc69f602ed2.jpeg",
-    },
-    tenant: {
-      name: "Nguyễn Văn A",
-      id: "123456789",
-      phone: "0123456789",
-      email: "nguyenvana@email.com",
-    },
-    landlord: {
-      name: "Trần Thị B",
-      id: "987654321",
-      phone: "0987654321",
-      email: "landlord@email.com",
-    },
-    payment: {
-      rent: 5000000,
-      deposit: 10000000,
-      services: [
-        { name: "Phí điện", amount: "3,500 VNĐ/kWh" },
-        { name: "Phí nước", amount: "25,000 VNĐ/m³" },
-        { name: "Internet", amount: "200,000 VNĐ/tháng" },
-        { name: "Phí dịch vụ", amount: "200,000 VNĐ/tháng" },
-      ],
-    },
-  };
-
-  const terms = [
-    {
-      id: 1,
-      title: "1. Điều khoản chung",
-      content:
-        "Hai bên tự nguyện thỏa thuận và cam kết thực hiện đúng các điều khoản sau đây...",
-    },
-    {
-      id: 2,
-      title: "2. Thời hạn cho thuê",
-      content:
-        "Thời hạn thuê nhà là 12 tháng kể từ ngày ký hợp đồng. Có thể gia hạn nếu hai bên đồng ý...",
-    },
-    {
-      id: 3,
-      title: "3. Giá thuê và thanh toán",
-      content:
-        "Giá thuê được thanh toán hàng tháng vào ngày 05. Bao gồm tiền thuê và các chi phí phát sinh...",
-    },
-    {
-      id: 4,
-      title: "4. Quyền và nghĩa vụ bên thuê",
-      content:
-        "Bên thuê có trách nhiệm giữ gìn nhà ở và tài sản trong nhà, thanh toán đúng hạn...",
-    },
-    {
-      id: 5,
-      title: "5. Quyền và nghĩa vụ bên cho thuê",
-      content:
-        "Bên cho thuê có trách nhiệm bảo đảm quyền sử dụng nhà ở, bảo trì sửa chữa khi cần...",
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const toggleTerm = (termId) => {
     setExpandedTerms((prev) =>
@@ -117,16 +48,71 @@ const RentalContract = () => {
   useEffect(() => {
     const fetchContractData = async () => {
       try {
+        setLoading(true);
         const response = await fetch(`${CONFIG.API_URL}/contracts/${id}`);
-        const data = await response.json();
-        setContractData(data);
+
+        if (!response.ok) {
+          throw new Error("Không thể lấy thông tin hợp đồng");
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          setContractData(result.data);
+          setEditedInfo({
+            name: result.data.tenant.name,
+            id: result.data.tenant.id,
+            phone: result.data.tenant.phone,
+            email: result.data.tenant.email,
+          });
+        } else {
+          throw new Error(result.message || "Không thể lấy thông tin hợp đồng");
+        }
       } catch (error) {
+        setError(error.message);
         console.error("Lỗi khi lấy dữ liệu hợp đồng:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchContractData();
   }, [id]);
+
+  const [serviceUsages, setServiceUsages] = useState([]);
+
+  useEffect(() => {
+    const fetchServiceUsages = async () => {
+      try {
+        const response = await fetch(
+          `${CONFIG.API_URL}/contracts/${id}/service-usages`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        console.log("Response status:", response.status);
+        const result = await response.json();
+        console.log("Service usages result:", result);
+
+        if (response.ok) {
+          if (result.success) {
+            setServiceUsages(result.data);
+          }
+        } else {
+          console.error("Lỗi khi lấy dữ liệu dịch vụ:", result);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu dịch vụ:", error);
+      }
+    };
+
+    if (contractData) {
+      fetchServiceUsages();
+    }
+  }, [contractData, id]);
 
   const handleUpdateInfo = async () => {
     try {
@@ -143,11 +129,23 @@ const RentalContract = () => {
       );
 
       if (response.ok) {
-        setContractData((prev) => ({
-          ...prev,
-          tenant: editedInfo,
-        }));
-        setIsEditing(false);
+        const result = await response.json();
+        if (result.success) {
+          // Cập nhật dữ liệu hợp đồng với thông tin đã cập nhật
+          setContractData((prev) => ({
+            ...prev,
+            tenant: {
+              ...prev.tenant,
+              name: editedInfo.name,
+              id: editedInfo.id,
+              phone: editedInfo.phone,
+              email: editedInfo.email,
+            },
+          }));
+          setIsEditing(false);
+        } else {
+          throw new Error(result.message || "Không thể cập nhật thông tin");
+        }
       } else {
         throw new Error("Không thể cập nhật thông tin");
       }
@@ -216,6 +214,8 @@ const RentalContract = () => {
         throw new Error("Không thể ký hợp đồng");
       }
 
+      const contractResult = await contractResponse.json();
+
       // 4. Nếu thành công, chuyển đến trang thanh toán
       setSignStatus({ signing: false, success: true, error: null });
       navigate("/payment-confirmation", {
@@ -245,25 +245,36 @@ const RentalContract = () => {
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
+  if (loading) {
+    return <div className={styles.loading}>Đang tải thông tin hợp đồng...</div>;
+  }
+
+  if (error) {
+    return <div className={styles.error}>Lỗi: {error}</div>;
+  }
+
+  if (!contractData) {
+    return (
+      <div className={styles.error}>Không tìm thấy thông tin hợp đồng</div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerRoom}>
-          <img src={contractInfo.room.image} alt={contractInfo.room.name} />
+          <img src={contractData.room.image} alt={contractData.room.name} />
           <div className={styles.roomInfo}>
-            <h1>{contractInfo.room.name}</h1>
+            <h1>{contractData.room.name}</h1>
             <div className={styles.roomMeta}>
               <span>
-                <Star size={16} className={styles.icon} /> 4.8 (128 đánh giá)
-              </span>
-              <span>
                 <Home size={16} className={styles.icon} />{" "}
-                {contractInfo.room.type}
+                {contractData.room.type}
               </span>
               <span>
                 <AlertCircle size={16} className={styles.icon} />{" "}
-                {contractInfo.room.area}
+                {contractData.room.area}
               </span>
             </div>
           </div>
@@ -271,10 +282,10 @@ const RentalContract = () => {
         <div className={styles.contractStatus}>
           <div className={styles.contractId}>
             <FileText size={20} />
-            <span>Mã HĐ: {contractInfo.id}</span>
+            <span>Mã HĐ: {contractData.id}</span>
           </div>
-          <div className={`${styles.status} ${styles[contractInfo.status]}`}>
-            {contractInfo.status === "pending" ? (
+          <div className={`${styles.status} ${styles[contractData.status]}`}>
+            {contractData.status === "pending" ? (
               <>
                 <Clock size={20} />
                 <span>Chờ ký kết</span>
@@ -331,13 +342,13 @@ const RentalContract = () => {
                 <div className={styles.periodItem}>
                   <span className={styles.label}>Ngày bắt đầu</span>
                   <span className={styles.value}>
-                    {formatDate(contractInfo.startDate)}
+                    {formatDate(contractData.startDate)}
                   </span>
                 </div>
                 <div className={styles.periodItem}>
                   <span className={styles.label}>Ngày kết thúc</span>
                   <span className={styles.value}>
-                    {formatDate(contractInfo.endDate)}
+                    {formatDate(contractData.endDate)}
                   </span>
                 </div>
               </div>
@@ -345,7 +356,6 @@ const RentalContract = () => {
 
             {/* Parties Information */}
             <div className={styles.partiesGrid}>
-              {/* Tenant Info */}
               {/* Tenant Info */}
               <div className={styles.partyCard}>
                 <h2>
@@ -366,7 +376,7 @@ const RentalContract = () => {
                       />
                     ) : (
                       <span className={styles.value}>
-                        {contractInfo.tenant.name}
+                        {contractData.tenant.name}
                       </span>
                     )}
                   </div>
@@ -383,7 +393,7 @@ const RentalContract = () => {
                       />
                     ) : (
                       <span className={styles.value}>
-                        {contractInfo.tenant.id}
+                        {contractData.tenant.id}
                       </span>
                     )}
                   </div>
@@ -403,7 +413,7 @@ const RentalContract = () => {
                       />
                     ) : (
                       <span className={styles.value}>
-                        {contractInfo.tenant.phone}
+                        {contractData.tenant.phone}
                       </span>
                     )}
                   </div>
@@ -423,7 +433,7 @@ const RentalContract = () => {
                       />
                     ) : (
                       <span className={styles.value}>
-                        {contractInfo.tenant.email}
+                        {contractData.tenant.email}
                       </span>
                     )}
                   </div>
@@ -431,17 +441,19 @@ const RentalContract = () => {
                     <div className={styles.editActions}>
                       <button
                         className={styles.saveBtn}
-                        onClick={() => {
-                          // Xử lý lưu thông tin
-                          setIsEditing(false);
-                        }}
+                        onClick={handleUpdateInfo}
                       >
                         Lưu thay đổi
                       </button>
                       <button
                         className={styles.cancelBtn}
                         onClick={() => {
-                          setEditedInfo({ ...contractInfo.tenant });
+                          setEditedInfo({
+                            name: contractData.tenant.name,
+                            id: contractData.tenant.id,
+                            phone: contractData.tenant.phone,
+                            email: contractData.tenant.email,
+                          });
                           setIsEditing(false);
                         }}
                       >
@@ -462,25 +474,25 @@ const RentalContract = () => {
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Họ tên:</span>
                     <span className={styles.value}>
-                      {contractInfo.landlord.name}
+                      {contractData.landlord.name}
                     </span>
                   </div>
                   <div className={styles.infoItem}>
                     <span className={styles.label}>CMND/CCCD:</span>
                     <span className={styles.value}>
-                      {contractInfo.landlord.id}
+                      {contractData.landlord.id}
                     </span>
                   </div>
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Số điện thoại:</span>
                     <span className={styles.value}>
-                      {contractInfo.landlord.phone}
+                      {contractData.landlord.phone}
                     </span>
                   </div>
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Email:</span>
                     <span className={styles.value}>
-                      {contractInfo.landlord.email}
+                      {contractData.landlord.email}
                     </span>
                   </div>
                 </div>
@@ -497,24 +509,25 @@ const RentalContract = () => {
             </div>
 
             <div className={styles.termsList}>
-              {terms.map((term) => (
-                <div key={term.id} className={styles.termItem}>
-                  <div
-                    className={styles.termHeader}
-                    onClick={() => toggleTerm(term.id)}
-                  >
-                    <h3>{term.title}</h3>
-                    {expandedTerms.includes(term.id) ? (
-                      <ChevronUp size={20} />
-                    ) : (
-                      <ChevronDown size={20} />
+              {contractData.terms &&
+                contractData.terms.map((term) => (
+                  <div key={term.id} className={styles.termItem}>
+                    <div
+                      className={styles.termHeader}
+                      onClick={() => toggleTerm(term.id)}
+                    >
+                      <h3>{term.title}</h3>
+                      {expandedTerms.includes(term.id) ? (
+                        <ChevronUp size={20} />
+                      ) : (
+                        <ChevronDown size={20} />
+                      )}
+                    </div>
+                    {expandedTerms.includes(term.id) && (
+                      <div className={styles.termContent}>{term.content}</div>
                     )}
                   </div>
-                  {expandedTerms.includes(term.id) && (
-                    <div className={styles.termContent}>{term.content}</div>
-                  )}
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
@@ -527,13 +540,17 @@ const RentalContract = () => {
                 <div className={styles.paymentItem}>
                   <span className={styles.label}>Tiền thuê hàng tháng</span>
                   <span className={styles.value}>
-                    {formatCurrency(contractInfo.payment.rent)}
+                    {formatCurrency(contractData.payment.rent)}
+                    <span className={styles.discountNote}>
+                      (Tháng đầu giảm 10%:{" "}
+                      {formatCurrency(contractData.payment.rent * 0.9)})
+                    </span>
                   </span>
                 </div>
                 <div className={styles.paymentItem}>
                   <span className={styles.label}>Tiền đặt cọc</span>
                   <span className={styles.value}>
-                    {formatCurrency(contractInfo.payment.deposit)}
+                    {formatCurrency(contractData.payment.deposit)}
                   </span>
                 </div>
               </div>
@@ -542,14 +559,32 @@ const RentalContract = () => {
             <div className={styles.serviceCharges}>
               <h2>Phí dịch vụ</h2>
               <div className={styles.serviceList}>
-                {contractInfo.payment.services.map((service, index) => (
-                  <div key={index} className={styles.serviceItem}>
-                    <span className={styles.serviceName}>{service.name}</span>
-                    <span className={styles.serviceAmount}>
-                      {service.amount}
-                    </span>
+                {serviceUsages.length > 0 ? (
+                  serviceUsages.map((service) => (
+                    <div key={service.id} className={styles.serviceItem}>
+                      <span className={styles.serviceName}>
+                        {service.name}
+                        {service.previous_reading &&
+                          service.current_reading && (
+                            <span className={styles.usageDetails}>
+                              ({service.previous_reading} -{" "}
+                              {service.current_reading})
+                            </span>
+                          )}
+                      </span>
+                      <span className={styles.serviceAmount}>
+                        {formatCurrency(service.total_amount)}
+                        <span className={styles.priceUnit}>
+                          /{service.price_unit}
+                        </span>
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.noServiceData}>
+                    Không có dữ liệu dịch vụ cho kỳ này
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -557,13 +592,12 @@ const RentalContract = () => {
       </div>
 
       {/* Actions */}
-      {/* Actions */}
       <div className={styles.actions}>
         <button className={styles.downloadBtn}>
           <Download size={20} />
           Tải hợp đồng PDF
         </button>
-        {contractInfo.status === "pending" && (
+        {contractData.status === "pending" && (
           <>
             <button
               className={styles.editBtn}

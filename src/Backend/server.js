@@ -44,7 +44,7 @@ if (!fs.existsSync(uploadDir)) {
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/landlords", landlordRoutes);
-app.use("/api/contract", contractRoutes);
+app.use("/api/contracts", contractRoutes);
 app.use("/api/rooms", roomRouter);
 
 // Error handling middleware
