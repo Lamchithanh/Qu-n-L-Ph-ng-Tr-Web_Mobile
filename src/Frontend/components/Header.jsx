@@ -105,7 +105,7 @@ const Header = () => {
     if (userInfo.role === "landlord_pending") {
       return [
         {
-          to: "/TenantManagement",
+          to: "/dashboard",
           label: "Quản lý người thuê",
         },
         ...commonItems,

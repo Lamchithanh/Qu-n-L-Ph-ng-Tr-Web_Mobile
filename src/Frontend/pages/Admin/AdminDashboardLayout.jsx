@@ -1,6 +1,5 @@
-// DashboardLayout.jsx - Layout chính cho dashboard chủ trọ
 import React, { useState } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   User,
@@ -14,92 +13,94 @@ import {
   X,
   ChevronDown,
   PieChart,
-  Search,
-  Filter,
+  UserCheck,
+  CreditCard,
 } from "lucide-react";
 
-const DashboardLayout = () => {
+const AdminDashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
 
-  // Thông tin người dùng (giả lập)
+  // Thông tin người dùng admin (giả lập)
   const user = {
-    name: "Nguyễn Văn A",
-    email: "nguyenvana@example.com",
-    avatar: "https://via.placeholder.com/40",
-    role: "Chủ trọ",
-    unreadNotifications: 3,
+    name: "Super Admin",
+    email: "superadmin@thuededay.com",
+    avatar: "/api/placeholder/40/40",
+    role: "Quản Trị Viên Cao Cấp",
+    unreadNotifications: 5,
   };
 
-  // Menu điều hướng
+  // Menu điều hướng cho super admin
   const navigationMenu = [
-    { title: "Tổng quan", path: "/dashboard", icon: <PieChart size={20} /> },
-
+    {
+      title: "Tổng quan",
+      path: "/admin",
+      icon: <PieChart size={20} />,
+    },
+    {
+      title: "Quản lý chủ trọ",
+      path: "/admin/landlords",
+      icon: <UserCheck size={20} />,
+    },
     {
       title: "Quản lý phòng trọ",
-      path: "/dashboard/RoomsManagement",
+      path: "/admin/rooms",
       icon: <Home size={20} />,
     },
     {
       title: "Quản lý hợp đồng",
-      path: "/dashboard/contracts",
+      path: "/admin/contracts",
       icon: <FileText size={20} />,
     },
     {
       title: "Quản lý dịch vụ",
-      path: "/dashboard/services",
+      path: "/admin/services",
       icon: <Grid size={20} />,
     },
     {
       title: "Quản lý hóa đơn",
-      path: "/dashboard/invoices",
+      path: "/admin/invoices",
       icon: <DollarSign size={20} />,
     },
     {
       title: "Quản lý thanh toán",
-      path: "/dashboard/payments",
-      icon: <DollarSign size={20} />,
+      path: "/admin/payments",
+      icon: <CreditCard size={20} />,
     },
     {
       title: "Đánh giá & Phản hồi",
-      path: "/dashboard/reviews",
+      path: "/admin/reviews",
       icon: <Bell size={20} />,
     },
-    // {
-    //   title: "Cài đặt",
-    //   path: "/dashboard/settings",
-    //   icon: <Settings size={20} />,
-    // },
+    {
+      title: "Quản lý người dùng",
+      path: "/admin/users",
+      icon: <User size={20} />,
+    },
   ];
 
   // Mẫu thông báo
   const notifications = [
     {
       id: 1,
-      text: "Hợp đồng mới đang chờ xác nhận",
+      text: "Chủ trọ mới đăng ký chờ phê duyệt",
       time: "5 phút trước",
       read: false,
     },
     {
       id: 2,
-      text: "Hóa đơn tháng 2 đã được thanh toán",
+      text: "Hệ thống có phòng trọ mới được thêm",
       time: "2 giờ trước",
       read: false,
     },
     {
       id: 3,
-      text: "Yêu cầu sửa chữa mới từ phòng 101",
+      text: "Có hợp đồng sắp hết hạn",
       time: "1 ngày trước",
       read: false,
-    },
-    {
-      id: 4,
-      text: "Nguyễn Văn B đã gia hạn hợp đồng",
-      time: "3 ngày trước",
-      read: true,
     },
   ];
 
@@ -134,19 +135,11 @@ const DashboardLayout = () => {
           <div>
             <div className="flex items-center justify-between p-4 border-b">
               {sidebarOpen ? (
-                <Link
-                  to="/dashboard"
-                  className="font-bold text-xl text-blue-600"
-                >
-                  Thuê dễ dàng
-                </Link>
+                <div className="font-bold text-xl text-blue-600">
+                  Quản Trị Hệ Thống
+                </div>
               ) : (
-                <Link
-                  to="/dashboard"
-                  className="font-bold text-xl text-blue-600"
-                >
-                  Thuê
-                </Link>
+                <div className="font-bold text-xl text-blue-600">QT</div>
               )}
               <button
                 onClick={toggleSidebar}
@@ -161,9 +154,9 @@ const DashboardLayout = () => {
               <ul className="space-y-1 px-2">
                 {navigationMenu.map((item, index) => (
                   <li key={index}>
-                    <Link
-                      to={item.path}
-                      className={`flex items-center py-3 px-3 rounded-md transition duration-200 ${
+                    <button
+                      onClick={() => navigate(item.path)}
+                      className={`w-full flex items-center py-3 px-3 rounded-md transition duration-200 ${
                         location.pathname === item.path
                           ? "bg-blue-50 text-blue-600"
                           : "text-gray-600 hover:bg-gray-100"
@@ -171,7 +164,7 @@ const DashboardLayout = () => {
                     >
                       <span className="mr-3">{item.icon}</span>
                       {sidebarOpen && <span>{item.title}</span>}
-                    </Link>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -189,8 +182,11 @@ const DashboardLayout = () => {
         {/* Top navbar */}
         <header className="bg-white shadow-sm h-16 flex items-center px-4">
           <div className="flex-1 flex justify-between items-center">
-            {/* Page title can go here */}
-            <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
+            {/* Page title */}
+            <h1 className="text-xl font-semibold text-gray-800">
+              {navigationMenu.find((item) => item.path === location.pathname)
+                ?.title || "Tổng Quan"}
+            </h1>
 
             <div className="flex items-center space-x-4">
               {/* Notifications */}
@@ -232,12 +228,9 @@ const DashboardLayout = () => {
                       ))}
                     </div>
                     <div className="p-2 text-center border-t">
-                      <Link
-                        to="/dashboard/notifications"
-                        className="text-sm text-blue-500 hover:underline"
-                      >
+                      <button className="text-sm text-blue-500 hover:underline">
                         Xem tất cả
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -275,18 +268,18 @@ const DashboardLayout = () => {
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
                     <div>
-                      <Link
-                        to="/dashboard/LandlordProfile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      <button
+                        onClick={() => navigate("/admin/profile")}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         Thông tin tài khoản
-                      </Link>
-                      <Link
-                        to="/dashboard/settings"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      </button>
+                      <button
+                        onClick={() => navigate("/admin/settings")}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         Cài đặt
-                      </Link>
+                      </button>
                       <button
                         onClick={logoutHandler}
                         className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 border-t"
@@ -310,4 +303,4 @@ const DashboardLayout = () => {
   );
 };
 
-export default DashboardLayout;
+export default AdminDashboardLayout;

@@ -19,6 +19,13 @@ import InvoicesManagement from "./Frontend/pages/Landlord/InvoicesManagement.jsx
 import PaymentsManagement from "./Frontend/pages/Landlord/PaymentsManagement.jsx";
 import ReviewsManagement from "./Frontend/pages/Landlord/ReviewsManagement.jsx";
 import DashboardSettings from "./Frontend/pages/Landlord/DashboardSettings.jsx";
+import AdminDashboardLayout from "./Frontend/pages/Admin/AdminDashboardLayout.jsx";
+import AdminDashboardOverview from "./Frontend/pages/Admin/AdminDashboardOverview.jsx";
+import LandlordsManagement from "./Frontend/pages/Admin/LandlordsManagement.jsx";
+import AdminRoomsManagement from "./Frontend/pages/Admin/RoomsManagement.jsx";
+import AdminContractsManagement from "./Frontend/pages/Admin/AdminContractsManagement.jsx";
+import AdminServicesManagement from "./Frontend/pages/Admin/AdminServicesManagement.jsx";
+import InvoicesPaymentsManagement from "./Frontend/pages/Admin/InvoicesPaymentsManagement.jsx";
 
 // Lazy load components với prefetch
 const Homepage = lazy(() => import("./Frontend/pages/HomePage"));
@@ -132,6 +139,29 @@ const App = () => {
                     <Route path="payments" element={<PaymentsManagement />} />
                     <Route path="reviews" element={<ReviewsManagement />} />
                     <Route path="settings" element={<DashboardSettings />} />
+                  </Route>
+
+                  {/* Dashboard Super Admin */}
+                  <Route path="/admin" element={<AdminDashboardLayout />}>
+                    <Route index element={<AdminDashboardOverview />} />
+                    <Route path="landlords" element={<LandlordsManagement />} />
+                    <Route path="rooms" element={<AdminRoomsManagement />} />
+                    <Route
+                      path="contracts"
+                      element={<AdminContractsManagement />}
+                    />
+                    <Route
+                      path="services"
+                      element={<AdminServicesManagement />}
+                    />
+
+                    <Route
+                      path="payments"
+                      element={<InvoicesPaymentsManagement />}
+                    />
+                    {/* <Route path="reviews" element={<ReviewsManagement />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="settings" element={<AdminSettings />} /> */}
                   </Route>
                 </Routes>
               </Suspense>
