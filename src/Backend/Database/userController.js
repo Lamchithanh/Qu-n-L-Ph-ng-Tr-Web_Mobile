@@ -1,4 +1,4 @@
-import { executeQuery } from "../Database/database.js";
+import { executeQuery } from "./database.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 

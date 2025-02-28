@@ -18,10 +18,11 @@ import styles from "../../Style/HomePage.module.scss";
 import AppStore from "../../assets/AppStore_Icon.png";
 import GooglePlay from "../../assets/Google_Play.png";
 import MobileApp from "../../assets/Mobile_App.jpg";
-import RoomCard from "../components/RoomCard";
+import RoomCard, { formatRoomData } from "../components/RoomCard";
 import roomService from "../Service/roomService.js";
 import { useToast } from "../Contexts/ToastContext";
 import DefaultRoomImage from "../../assets/home_img.jpg"; // Add this import
+import Img_Home from "../../assets/phone2.jpg"; // Add this import
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -42,32 +43,12 @@ const HomePage = () => {
   const fetchFeaturedRooms = async () => {
     try {
       const response = await roomService.getRooms();
+      console.log("API response data:", response.data);
 
       if (response.success) {
-        const formattedRooms = response.data.map((room) => ({
-          id: room.id,
-          title: room.title || "Phòng chưa có tên",
-          address: room.address || "Địa chỉ chưa cập nhật",
-          price: room.price
-            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
-            : "Chưa cập nhật",
-          area: room.area || "Chưa có",
-          images: Array.isArray(room.images)
-            ? room.images[0] || DefaultRoomImage
-            : typeof room.images === "string"
-            ? JSON.parse(room.images)[0] || DefaultRoomImage
-            : DefaultRoomImage,
-          amenities: Array.isArray(room.facilities)
-            ? room.facilities
-            : typeof room.facilities === "string"
-            ? JSON.parse(room.facilities)
-            : [],
-          rating: room.rating || 0,
-          reviews: room.review_count || 0,
-          status: room.status,
-          tags: room.status === "available" ? ["Còn trống"] : [],
-        }));
-
+        const formattedRooms = response.data.map((room) =>
+          formatRoomData(room)
+        );
         setFeaturedRooms(formattedRooms);
       }
     } catch (err) {
@@ -96,30 +77,9 @@ const HomePage = () => {
       const response = await roomService.getRoomsByFilters(filters);
 
       if (response.success) {
-        const formattedRooms = response.data.map((room) => ({
-          id: room.id,
-          title: room.title || "Phòng chưa có tên",
-          address: room.address || "Địa chỉ chưa cập nhật",
-          price: room.price
-            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
-            : "Chưa cập nhật",
-          area: room.area || "Chưa có",
-          images: Array.isArray(room.images)
-            ? room.images[0] || DefaultRoomImage
-            : typeof room.images === "string"
-            ? JSON.parse(room.images)[0] || DefaultRoomImage
-            : DefaultRoomImage,
-          amenities: Array.isArray(room.facilities)
-            ? room.facilities
-            : typeof room.facilities === "string"
-            ? JSON.parse(room.facilities)
-            : [],
-          rating: room.rating || 0,
-          reviews: room.review_count || 0,
-          status: room.status,
-          tags: room.status === "available" ? ["Còn trống"] : [],
-        }));
-
+        const formattedRooms = response.data.map((room) =>
+          formatRoomData(room)
+        );
         setFeaturedRooms(formattedRooms);
       }
     } catch (err) {
@@ -130,6 +90,30 @@ const HomePage = () => {
     }
   };
 
+  // Component hiển thị thời gian thực
+  const RealTimeClock = () => {
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+      // Cập nhật thời gian mỗi giây
+      const timer = setInterval(() => {
+        setTime(new Date());
+      }, 1000);
+
+      // Dọn dẹp interval khi component unmount
+      return () => clearInterval(timer);
+    }, []);
+
+    return (
+      <div className={styles.timeDisplay}>
+        {time.toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </div>
+    );
+  };
+
   const goToRoomDetail = (roomId) => {
     navigate(`/room/${roomId}`);
   };
@@ -138,67 +122,83 @@ const HomePage = () => {
     <div className={styles.homePage}>
       {/* Hero Section */}
       <section className={styles.heroSection}>
-        <div className={styles.heroContent}>
-          <h1>Tìm Ngôi Nhà Mơ Ước Của Bạn</h1>
-          <p>Khám phá hàng nghìn căn hộ chất lượng cao với mức giá phù hợp</p>
+        <div className={styles.container}>
+          {/* Cột bên trái - Hình ảnh */}
+          <div className={styles.imageColumn}>
+            <img
+              src={Img_Home}
+              alt="Ngôi nhà mơ ước"
+              className={styles.heroImage}
+            />
+          </div>
 
-          {/* Search Form */}
-          <form onSubmit={handleSearch} className={styles.searchForm}>
-            <div className={styles.searchGrid}>
-              <div className={styles.inputWrapper}>
-                <MapPin size={20} />
-                <input
-                  type="text"
-                  placeholder="Khu vực"
-                  value={searchParams.location}
-                  onChange={(e) =>
-                    setSearchParams({
-                      ...searchParams,
-                      location: e.target.value,
-                    })
-                  }
-                />
+          {/* Cột bên phải - Nội dung */}
+          <div className={styles.contentColumn}>
+            <RealTimeClock />
+
+            <h1 className={styles.title}>Tìm Ngôi Nhà Mơ Ước Của Bạn</h1>
+            <p className={styles.subtitle}>
+              Khám phá hàng nghìn căn hộ chất lượng cao với mức giá phù hợp
+            </p>
+
+            {/* Search Form */}
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className={styles.searchGrid}>
+                <div className={styles.inputWrapper}>
+                  <MapPin size={20} />
+                  <input
+                    type="text"
+                    placeholder="Khu vực"
+                    value={searchParams.location}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        location: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className={styles.inputWrapper}>
+                  <DollarSign size={20} />
+                  <select
+                    value={searchParams.priceRange}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        priceRange: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Khoảng giá</option>
+                    <option value="0-2">Dưới 2 triệu</option>
+                    <option value="2-3">2 - 3 triệu</option>
+                    <option value="3-5">3 - 5 triệu</option>
+                    <option value="5+">Trên 5 triệu</option>
+                  </select>
+                </div>
+
+                <div className={styles.inputWrapper}>
+                  <Home size={20} />
+                  <select
+                    value={searchParams.type}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, type: e.target.value })
+                    }
+                  >
+                    <option value="">Loại nhà</option>
+                    <option value="room">Phòng trọ</option>
+                    <option value="apartment">Căn hộ mini</option>
+                    <option value="house">Nhà nguyên căn</option>
+                  </select>
+                </div>
+
+                <button type="submit" className={styles.searchButton}>
+                  Tìm Kiếm
+                </button>
               </div>
-
-              <div className={styles.inputWrapper}>
-                <DollarSign size={20} />
-                <select
-                  value={searchParams.priceRange}
-                  onChange={(e) =>
-                    setSearchParams({
-                      ...searchParams,
-                      priceRange: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Khoảng giá</option>
-                  <option value="0-2">Dưới 2 triệu</option>
-                  <option value="2-3">2 - 3 triệu</option>
-                  <option value="3-5">3 - 5 triệu</option>
-                  <option value="5+">Trên 5 triệu</option>
-                </select>
-              </div>
-
-              <div className={styles.inputWrapper}>
-                <Home size={20} />
-                <select
-                  value={searchParams.type}
-                  onChange={(e) =>
-                    setSearchParams({ ...searchParams, type: e.target.value })
-                  }
-                >
-                  <option value="">Loại nhà</option>
-                  <option value="room">Phòng trọ</option>
-                  <option value="apartment">Căn hộ mini</option>
-                  <option value="house">Nhà nguyên căn</option>
-                </select>
-              </div>
-
-              <button type="submit" className={styles.searchButton}>
-                Tìm Kiếm
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </section>
 

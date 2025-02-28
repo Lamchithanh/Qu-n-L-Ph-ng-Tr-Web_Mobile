@@ -41,6 +41,7 @@ CREATE INDEX idx_landlords_status ON landlords(status);
 -- Rooms table
 CREATE TABLE rooms (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    room_type ENUM('boarding_house', 'mini_apartment', 'dormitory', 'other') DEFAULT 'boarding_house',
     title VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
     landlord_id INT NULL,

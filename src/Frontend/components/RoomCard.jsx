@@ -1,6 +1,6 @@
 import React from "react";
-import { MapPin, Ruler, Star } from "lucide-react";
-import styles from "../../Style/HomePage.module.scss";
+import { MapPin, Ruler, Star, Home, Shield } from "lucide-react";
+import styles from "../../Style/RoomCard.module.scss";
 import DefaultRoomImage from "../../assets/home_img.jpg";
 
 const RoomCard = ({ room, onDetailClick }) => {
@@ -19,7 +19,6 @@ const RoomCard = ({ room, onDetailClick }) => {
   } = room;
 
   // Xử lý images với nhiều trường hợp
-  // In RoomCard.jsx
   const getImageUrl = () => {
     try {
       // Nếu images là mảng và có phần tử
@@ -52,8 +51,7 @@ const RoomCard = ({ room, onDetailClick }) => {
 
   const imageUrl = getImageUrl();
 
-  // Trong RoomCard.jsx
-  // Trong RoomCard.jsx
+  // Format giá
   const formatPrice = (price) => {
     if (!price) return "Giá chưa cập nhật";
 
@@ -72,101 +70,143 @@ const RoomCard = ({ room, onDetailClick }) => {
     return `${price.toLocaleString("vi-VN")} đ/tháng`;
   };
 
-  // Xử lý các tiện ích
-  const renderAmenities = () => {
-    if (!amenities || amenities.length === 0) {
-      return <span className="text-gray-500">Chưa có tiện ích</span>;
-    }
+  // Lấy loại phòng dựa trên diện tích
+  const getRoomType = (area) => {
+    if (!area || area === "Chưa có") return "Phòng";
 
-    // Giới hạn số lượng tiện ích hiển thị
-    const displayedAmenities = amenities.slice(0, 3);
-    return displayedAmenities.map((amenity, index) => (
-      <span key={index} className="mr-2 text-sm text-gray-600">
-        {typeof amenity === "string" ? amenity : "Tiện ích"}
-      </span>
-    ));
+    const numArea = parseFloat(area);
+    if (isNaN(numArea)) return "Phòng";
+
+    if (numArea < 20) return "Phòng trọ";
+    if (numArea < 35) return "Căn hộ mini";
+    return "Căn hộ";
   };
 
-  // Tạo nhãn trạng thái phòng
-  const renderStatusTag = () => {
+  // Màu sắc cho trạng thái
+  const getStatusColor = () => {
     switch (status) {
       case "available":
-        return (
-          <div className="absolute top-2 right-2">
-            <span className={`${styles.tags}`}>Còn trống</span>
-          </div>
-        );
+        return {
+          bg: "rgba(16, 185, 129, 0.1)",
+          text: "#10b981",
+          border: "rgba(16, 185, 129, 0.5)",
+        };
       case "occupied":
-        return (
-          <div className="absolute top-2 right-2">
-            <span className={`${styles.tags}`}>Đã cho thuê</span>
-          </div>
-        );
+        return {
+          bg: "rgba(239, 68, 68, 0.1)",
+          text: "#ef4444",
+          border: "rgba(239, 68, 68, 0.5)",
+        };
       case "maintenance":
-        return (
-          <div className="absolute top-2 right-2">
-            <span className={`${styles.tags}`}>Đang sửa chữa</span>
-          </div>
-        );
+        return {
+          bg: "rgba(245, 158, 11, 0.1)",
+          text: "#f59e0b",
+          border: "rgba(245, 158, 11, 0.5)",
+        };
       default:
-        return null;
+        return {
+          bg: "rgba(107, 114, 128, 0.1)",
+          text: "#6b7280",
+          border: "rgba(107, 114, 128, 0.5)",
+        };
     }
   };
 
+  // Xử lý text trạng thái
+  const getStatusText = () => {
+    switch (status) {
+      case "available":
+        return "Còn trống";
+      case "occupied":
+        return "Đã cho thuê";
+      case "maintenance":
+        return "Đang sửa chữa";
+      default:
+        return "Không xác định";
+    }
+  };
+
+  const statusStyle = getStatusColor();
+  const statusText = getStatusText();
+  const roomType = getRoomType(area);
+
   return (
-    <div className={`${styles.roomCard} ${styles.fadeIn} relative`}>
-      <div className={styles.imageContainer}>
-        <img
-          src={imageUrl}
-          alt={title}
-          onError={(e) => {
-            e.target.src = DefaultRoomImage;
-          }}
-          style={{
-            width: "100%",
-            height: "200px",
-            objectFit: "cover",
-          }}
-        />
-        {renderStatusTag()}
+    <div className={styles.roomCard}>
+      <div className={styles.imageWrapper}>
+        <div className={styles.imageContainer}>
+          <img
+            src={imageUrl}
+            alt={title}
+            onError={(e) => {
+              e.target.src = DefaultRoomImage;
+            }}
+          />
+          <div className={styles.overlay}>
+            <button
+              onClick={() => onDetailClick(id)}
+              className={styles.viewButton}
+            >
+              Xem chi tiết
+            </button>
+          </div>
+        </div>
+        <div className={styles.tags}>
+          <span className={styles.typeTag}>
+            <Home size={14} />
+            {roomType}
+          </span>
+          <span
+            className={styles.statusTag}
+            style={{
+              backgroundColor: statusStyle.bg,
+              color: statusStyle.text,
+              borderColor: statusStyle.border,
+            }}
+          >
+            <Shield size={14} />
+            {statusText}
+          </span>
+        </div>
       </div>
 
-      <div className={styles.content}>
-        <h3 className="font-semibold text-lg">{title}</h3>
-        <p className={`${styles.address} text-gray-600 flex items-center`}>
-          <MapPin size={16} className="mr-2" />
-          {address}
-        </p>
-
-        <div
-          className={`${styles.stats} flex justify-between text-sm text-gray-700 my-2`}
-        >
-          <span className="flex items-center">
-            <Ruler size={16} className="mr-2" />
-            {area}m²
-          </span>
+      <div className={styles.contentContainer}>
+        <div className={styles.priceSection}>
+          <div className={styles.price}>{formatPrice(price)}</div>
           {rating > 0 && (
-            <span className="flex items-center">
-              <Star size={16} className="mr-2 text-yellow-500" />
-              {rating.toFixed(1)} ({reviews})
-            </span>
+            <div className={styles.rating}>
+              <Star size={16} />
+              <span>{rating.toFixed(1)}</span>
+              {reviews > 0 && (
+                <span className={styles.reviews}>({reviews})</span>
+              )}
+            </div>
           )}
         </div>
 
-        <div className={`${styles.amenities} my-2 flex flex-wrap`}>
-          {renderAmenities()}
+        <h3 className={styles.title}>{title}</h3>
+
+        <div className={styles.address}>
+          <MapPin size={16} />
+          <span>{address}</span>
         </div>
 
-        <div className={`${styles.footer} flex justify-between items-center`}>
-          <div className={`${styles.price} font-bold text-blue-600`}>
-            {formatPrice(price)}
+        <div className={styles.details}>
+          <div className={styles.area}>
+            <Ruler size={16} />
+            <span>{area}m²</span>
           </div>
-          <button
-            onClick={() => onDetailClick(id)}
-            className={`${styles.detailsButton} bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition`}
-          >
-            Xem chi tiết
-          </button>
+
+          <div className={styles.amenitiesContainer}>
+            {amenities && amenities.length > 0 ? (
+              amenities.slice(0, 3).map((amenity, index) => (
+                <span key={index} className={styles.amenity}>
+                  {typeof amenity === "string" ? amenity : "Tiện ích"}
+                </span>
+              ))
+            ) : (
+              <span className={styles.noAmenities}>Chưa có tiện ích</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -174,3 +214,45 @@ const RoomCard = ({ room, onDetailClick }) => {
 };
 
 export default RoomCard;
+
+// Hàm tiện ích để format dữ liệu phòng từ API
+export const formatRoomData = (roomData) => {
+  // Chuyển đổi facilities (đối tượng) thành amenities (mảng)
+  const amenitiesList = [];
+  if (roomData.facilities) {
+    // Nếu facilities là chuỗi, parse nó thành đối tượng
+    let facilities = roomData.facilities;
+    if (typeof facilities === "string") {
+      try {
+        facilities = JSON.parse(facilities);
+      } catch (e) {
+        facilities = {};
+      }
+    }
+
+    // Thêm các tiện ích có giá trị true vào mảng amenities
+    Object.entries(facilities).forEach(([key, value]) => {
+      if (value === true) {
+        const amenityName = key
+          .split("_")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+        amenitiesList.push(amenityName);
+      }
+    });
+  }
+
+  return {
+    id: roomData.id,
+    title: roomData.title || "Phòng chưa có tên",
+    address: roomData.address || "Địa chỉ chưa cập nhật",
+    price: roomData.price,
+    area: roomData.area || "Chưa có",
+    images: roomData.images || [],
+    amenities: amenitiesList, // Sử dụng danh sách tiện ích đã chuyển đổi
+    rating: roomData.rating ? parseFloat(roomData.rating) : 0,
+    reviews: roomData.review_count || 0, // Đảm bảo đúng tên trường
+    status: roomData.status,
+    tags: roomData.tags || [],
+  };
+};

@@ -11,6 +11,14 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Check,
+  Shield,
+  Home,
+  User,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Info,
 } from "lucide-react";
 
 const LandlordsManagement = () => {
@@ -37,6 +45,10 @@ const LandlordsManagement = () => {
   // State cho detail modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailLandlord, setDetailLandlord] = useState(null);
+
+  // State cho modal xác nhận xóa
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [landlordToDelete, setLandlordToDelete] = useState(null);
 
   // State cho form thêm/sửa chủ trọ
   const [formData, setFormData] = useState({
@@ -84,6 +96,8 @@ const LandlordsManagement = () => {
             address: `Số ${index + 1} Đường ABC, Quận ${
               (index % 5) + 1
             }, TP.HCM`,
+            property_count: Math.floor(Math.random() * 5) + 1,
+            pending_review: index % 3 === 0, // 33% chủ trọ đang chờ duyệt
           };
         });
 
@@ -100,8 +114,14 @@ const LandlordsManagement = () => {
       landlord.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
       landlord.id_card_number.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      filters.status === "all" || landlord.status === filters.status;
+    let matchesStatus = true;
+    if (filters.status === "active") {
+      matchesStatus = landlord.status === "approved";
+    } else if (filters.status === "inactive") {
+      matchesStatus = landlord.status === "rejected";
+    } else if (filters.status === "pending") {
+      matchesStatus = landlord.pending_review === true;
+    }
 
     let matchesDateRange = true;
     const landlordDate = new Date(landlord.created_at);
@@ -185,15 +205,49 @@ const LandlordsManagement = () => {
     setShowDetailModal(true);
   };
 
-  const handleDeleteLandlord = (landlordId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa chủ trọ này?")) {
-      setLandlords(landlords.filter((landlord) => landlord.id !== landlordId));
-    }
+  // Handler mở modal xác nhận xóa chủ trọ
+  const handleDeletePrompt = (landlord) => {
+    setLandlordToDelete(landlord);
+    setShowDeleteModal(true);
+  };
+
+  // Handler xóa chủ trọ
+  const handleDeleteLandlord = () => {
+    setLandlords(
+      landlords.filter((landlord) => landlord.id !== landlordToDelete.id)
+    );
+    setShowDeleteModal(false);
+    setLandlordToDelete(null);
+  };
+
+  // Handler duyệt chủ trọ
+  const handleApproveLandlord = (landlordId) => {
+    setLandlords(
+      landlords.map((landlord) =>
+        landlord.id === landlordId
+          ? { ...landlord, pending_review: false, status: "approved" }
+          : landlord
+      )
+    );
   };
 
   const handleExportLandlords = () => {
     console.log("Xuất danh sách chủ trọ");
     alert("Đã xuất danh sách chủ trọ!");
+  };
+
+  // Handler tạo file Excel báo cáo
+  const handleExportExcel = () => {
+    console.log(`Xuất báo cáo Excel chủ trọ`);
+    // Trong thực tế, sẽ gọi API để tạo và tải file Excel
+    alert("Đã tạo và tải xuống file Excel báo cáo chủ trọ!");
+  };
+
+  // Handler tạo file PDF báo cáo
+  const handleExportPDF = () => {
+    console.log(`Xuất báo cáo PDF chủ trọ`);
+    // Trong thực tế, sẽ gọi API để tạo và tải file PDF
+    alert("Đã tạo và tải xuống file PDF báo cáo chủ trọ!");
   };
 
   const handleFormChange = (e) => {
@@ -219,6 +273,7 @@ const LandlordsManagement = () => {
         id: `landlord_${landlords.length + 1}`,
         ...formData,
         created_at: new Date().toISOString(),
+        pending_review: true,
       };
 
       setLandlords([newLandlord, ...landlords]);
@@ -242,7 +297,7 @@ const LandlordsManagement = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Quản lý chủ trọ</h1>
         <p className="text-gray-600">
@@ -252,7 +307,7 @@ const LandlordsManagement = () => {
 
       {/* Thanh công cụ */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex flex-row justify-between items-center space-x-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
           {/* Tìm kiếm */}
           <div className="relative w-full md:w-64">
             <input
@@ -269,7 +324,7 @@ const LandlordsManagement = () => {
           </div>
 
           {/* Bộ lọc */}
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
             <div className="flex items-center space-x-2">
               <label className="text-sm text-gray-600">Trạng thái:</label>
               <select
@@ -279,9 +334,9 @@ const LandlordsManagement = () => {
                 onChange={handleFilterChange}
               >
                 <option value="all">Tất cả</option>
+                <option value="active">Đã duyệt</option>
+                <option value="inactive">Đã từ chối</option>
                 <option value="pending">Chờ duyệt</option>
-                <option value="approved">Đã duyệt</option>
-                <option value="rejected">Từ chối</option>
               </select>
             </div>
 
@@ -300,23 +355,32 @@ const LandlordsManagement = () => {
               </select>
             </div>
 
-            {/* Nút thêm chủ trọ và xuất */}
-            <div className="flex space-x-2">
+            {/* Nút xuất báo cáo */}
+            <div className="flex space-x-2 ml-auto">
               <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-700"
-                onClick={handleAddLandlord}
+                onClick={handleExportExcel}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 flex items-center text-sm hover:bg-gray-50"
               >
-                <Plus size={16} className="mr-2" />
-                Thêm chủ trọ
+                <Download size={14} className="mr-1.5" />
+                Xuất Excel
               </button>
               <button
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 flex items-center text-sm hover:bg-gray-50"
-                onClick={handleExportLandlords}
+                className="bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-red-700 text-sm"
+                onClick={handleExportPDF}
               >
-                <Download size={16} className="mr-2" />
-                Xuất DS
+                <FileText size={16} className="mr-1" />
+                PDF
               </button>
             </div>
+
+            {/* Nút thêm chủ trọ */}
+            <button
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-blue-700 text-sm"
+              onClick={handleAddLandlord}
+            >
+              <Plus size={16} className="mr-1" />
+              Thêm chủ trọ
+            </button>
           </div>
         </div>
       </div>
@@ -333,7 +397,7 @@ const LandlordsManagement = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -361,16 +425,14 @@ const LandlordsManagement = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {currentLandlords.map((landlord) => (
                   <tr key={landlord.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                        {landlord.id}
-                      </div>
+                      <div className="text-sm text-gray-900">{landlord.id}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm font-medium text-gray-900">
                         {landlord.full_name}
                       </div>
                     </td>
@@ -392,13 +454,13 @@ const LandlordsManagement = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {landlord.status === "approved" ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Đã duyệt
-                        </span>
-                      ) : landlord.status === "pending" ? (
+                      {landlord.pending_review ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                           Chờ duyệt
+                        </span>
+                      ) : landlord.status === "approved" ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          Đã duyệt
                         </span>
                       ) : (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
@@ -410,28 +472,32 @@ const LandlordsManagement = () => {
                       <button
                         onClick={() => handleViewLandlord(landlord)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
+                        title="Xem chi tiết"
                       >
                         <Eye size={18} />
                       </button>
+                      {landlord.pending_review && (
+                        <button
+                          onClick={() => handleApproveLandlord(landlord.id)}
+                          className="text-green-600 hover:text-green-900 mr-3"
+                          title="Duyệt chủ trọ"
+                        >
+                          <Check size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEditLandlord(landlord)}
                         className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        title="Chỉnh sửa"
                       >
                         <Edit size={18} />
                       </button>
                       <button
-                        onClick={() => handleDeleteLandlord(landlord.id)}
-                        className="text-red-600 hover:text-red-900 mr-3"
+                        onClick={() => handleDeletePrompt(landlord)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Xóa chủ trọ"
                       >
                         <Trash2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          /* Xuất PDF chủ trọ */
-                        }}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        <Download size={18} />
                       </button>
                     </td>
                   </tr>
@@ -470,7 +536,7 @@ const LandlordsManagement = () => {
                     disabled={currentPage === 1}
                     className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
                       currentPage === 1
-                        ? "text-gray-300"
+                        ? "text-gray-300 cursor-not-allowed"
                         : "text-gray-500 hover:bg-gray-50"
                     }`}
                   >
@@ -495,7 +561,7 @@ const LandlordsManagement = () => {
                     disabled={currentPage === totalPages}
                     className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
                       currentPage === totalPages
-                        ? "text-gray-300"
+                        ? "text-gray-300 cursor-not-allowed"
                         : "text-gray-500 hover:bg-gray-50"
                     }`}
                   >
@@ -526,119 +592,259 @@ const LandlordsManagement = () => {
             </div>
 
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Thông tin cơ bản */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    Thông tin chủ trọ
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Mã chủ trọ:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.id}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Tên chủ trọ:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.full_name}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Email:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.email}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Số điện thoại:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.phone}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          CMND/CCCD:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.id_card_number}
-                        </span>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Cột 1: Thông tin cơ bản */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">
+                      Thông tin chủ trọ
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Mã chủ trọ:</span>{" "}
+                        {detailLandlord.id}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Tên chủ trọ:</span>{" "}
+                        {detailLandlord.full_name}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Email:</span>{" "}
+                        {detailLandlord.email}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Số điện thoại:</span>{" "}
+                        {detailLandlord.phone}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">CMND/CCCD:</span>{" "}
+                        {detailLandlord.id_card_number}
+                      </p>
                     </div>
                   </div>
 
-                  <h3 className="text-lg font-medium text-gray-900 mt-4 mb-3">
-                    Thông tin kinh doanh
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">
+                      Thông tin kinh doanh
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <div className="flex items-center mb-3">
+                        <div className="bg-blue-100 rounded-full p-2 mr-3">
+                          <Home size={20} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {detailLandlord.property_count || 0} nhà trọ
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">
                           Giấy phép kinh doanh:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {detailLandlord.business_license || "Chưa cung cấp"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Ngày tham gia:
-                        </span>
-                        <span className="text-sm text-gray-900">
-                          {new Date(
-                            detailLandlord.created_at
-                          ).toLocaleDateString("vi-VN")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium text-gray-500">
-                          Trạng thái:
-                        </span>
-                        <span
-                          className={`text-sm font-medium ${
-                            detailLandlord.status === "approved"
-                              ? "text-green-600"
-                              : detailLandlord.status === "pending"
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {detailLandlord.status === "approved"
-                            ? "Đã duyệt"
-                            : detailLandlord.status === "pending"
-                            ? "Chờ duyệt"
-                            : "Từ chối"}
-                        </span>
+                        </span>{" "}
+                        {detailLandlord.business_license || "Chưa cung cấp"}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Ngày tham gia:</span>{" "}
+                        {new Date(detailLandlord.created_at).toLocaleDateString(
+                          "vi-VN"
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Trạng thái:</span>{" "}
+                        {detailLandlord.pending_review ? (
+                          <span className="text-yellow-600">Chờ duyệt</span>
+                        ) : detailLandlord.status === "approved" ? (
+                          <span className="text-green-600">Đã duyệt</span>
+                        ) : (
+                          <span className="text-red-600">Từ chối</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cột 2: Thông tin bổ sung */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">
+                      Địa chỉ
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <p className="text-sm text-gray-600 whitespace-pre-line">
+                        {detailLandlord.address || "Chưa cung cấp địa chỉ"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">
+                      Thống kê hoạt động
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <div className="h-40 flex flex-col justify-center items-center">
+                        <div className="w-full h-32 relative">
+                          <div className="absolute inset-0 flex items-end">
+                            {Array(6)
+                              .fill()
+                              .map((_, index) => (
+                                <div
+                                  key={index}
+                                  className="flex flex-col items-center mx-1 flex-1"
+                                >
+                                  <div
+                                    className="w-full bg-blue-500"
+                                    style={{
+                                      height: `${
+                                        Math.floor(Math.random() * 80) + 20
+                                      }%`,
+                                      maxHeight: "100%",
+                                      minHeight: "10%",
+                                    }}
+                                  ></div>
+                                  <span className="text-xs mt-1">
+                                    T{index + 1}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Hoạt động 6 tháng gần nhất
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Thông tin bổ sung */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    Thông tin bổ sung
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-md h-full">
-                    <div className="space-y-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-500 block mb-1">
-                          Địa chỉ:
-                        </span>
-                        <p className="text-sm text-gray-900">
-                          {detailLandlord.address || "Chưa cung cấp"}
-                        </p>
-                      </div>
+                {/* Cột 3: Phê duyệt và cài đặt */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                      <Shield size={20} className="text-blue-500 mr-2" /> Phê
+                      duyệt chủ trọ
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      {detailLandlord.pending_review ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            Chủ trọ này đang chờ được phê duyệt để sử dụng trong
+                            hệ thống.
+                          </p>
+                          <div className="flex space-x-2">
+                            <button
+                              className="bg-green-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-green-700 text-sm"
+                              onClick={() => {
+                                handleApproveLandlord(detailLandlord.id);
+                                setShowDetailModal(false);
+                              }}
+                            >
+                              <Check size={16} className="mr-1" />
+                              Phê duyệt
+                            </button>
+                            <button
+                              className="bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-red-700 text-sm"
+                              onClick={() => {
+                                handleDeletePrompt(detailLandlord);
+                                setShowDetailModal(false);
+                              }}
+                            >
+                              <Trash2 size={16} className="mr-1" />
+                              Từ chối
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <span className="font-medium">
+                              Trạng thái kiểm duyệt:
+                            </span>{" "}
+                            <span className="text-green-600">Đã phê duyệt</span>
+                          </p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <span className="font-medium">Ngày phê duyệt:</span>{" "}
+                            {new Date(
+                              detailLandlord.updated_at ||
+                                detailLandlord.created_at
+                            ).toLocaleDateString("vi-VN")}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-4">
+                            <span className="font-medium">
+                              Tình trạng hiện tại:
+                            </span>{" "}
+                            {detailLandlord.status === "approved" ? (
+                              <span className="text-green-600">
+                                Đang hoạt động
+                              </span>
+                            ) : (
+                              <span className="text-red-600">
+                                Đã vô hiệu hóa
+                              </span>
+                            )}
+                          </p>
+                          <div>
+                            <button
+                              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded-md text-sm flex items-center"
+                              onClick={() =>
+                                alert(
+                                  "Chức năng thay đổi trạng thái đang được phát triển"
+                                )
+                              }
+                            >
+                              {detailLandlord.status === "approved" ? (
+                                <>
+                                  <AlertCircle size={16} className="mr-1" />
+                                  Vô hiệu hóa
+                                </>
+                              ) : (
+                                <>
+                                  <Check size={16} className="mr-1" />
+                                  Kích hoạt lại
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">
+                      Kiểm tra hợp lệ
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <ul className="space-y-2">
+                        <li className="flex items-center text-sm">
+                          <CheckCircle
+                            size={16}
+                            className="text-green-500 mr-2"
+                          />
+                          <span>Thông tin cá nhân hợp lệ</span>
+                        </li>
+                        <li className="flex items-center text-sm">
+                          <CheckCircle
+                            size={16}
+                            className="text-green-500 mr-2"
+                          />
+                          <span>Đủ tuổi theo quy định pháp luật</span>
+                        </li>
+                        <li className="flex items-center text-sm">
+                          <CheckCircle
+                            size={16}
+                            className="text-green-500 mr-2"
+                          />
+                          <span>Không có tiền án tiền sự</span>
+                        </li>
+                        <li className="flex items-center text-sm">
+                          <CheckCircle
+                            size={16}
+                            className="text-green-500 mr-2"
+                          />
+                          <span>Không có báo cáo vi phạm từ người dùng</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -646,25 +852,41 @@ const LandlordsManagement = () => {
 
               {/* Buttons */}
               <div className="mt-8 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    /* Xuất PDF */
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 flex items-center"
-                >
-                  <Download size={16} className="mr-2" />
-                  Xuất PDF
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    handleEditLandlord(detailLandlord);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                >
-                  <Edit size={16} className="mr-2" />
-                  Chỉnh sửa
-                </button>
+                {detailLandlord.pending_review ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleApproveLandlord(detailLandlord.id);
+                        setShowDetailModal(false);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                    >
+                      <Check size={16} className="mr-2" />
+                      Phê duyệt
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeletePrompt(detailLandlord);
+                        setShowDetailModal(false);
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+                    >
+                      <Trash2 size={16} className="mr-2" />
+                      Từ chối
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handleDeletePrompt(detailLandlord);
+                      setShowDetailModal(false);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
+                  >
+                    <Trash2 size={16} className="mr-2" />
+                    Xóa chủ trọ
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -822,6 +1044,40 @@ const LandlordsManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xác nhận xóa chủ trọ */}
+      {showDeleteModal && landlordToDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Xác nhận xóa chủ trọ
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Bạn có chắc chắn muốn xóa chủ trọ{" "}
+                <span className="font-medium">
+                  {landlordToDelete.full_name}
+                </span>{" "}
+                không? Hành động này không thể hoàn tác.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  onClick={handleDeleteLandlord}
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

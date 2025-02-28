@@ -358,11 +358,11 @@ const AdminServicesManagement = () => {
             {/* Nút xuất báo cáo */}
             <div className="flex space-x-2 ml-auto">
               <button
-                className="bg-green-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-green-700 text-sm"
                 onClick={handleExportExcel}
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 flex items-center text-sm hover:bg-gray-50"
               >
-                <ArrowDownToLine size={16} className="mr-1" />
-                Excel
+                <Download size={14} className="mr-1.5" />
+                Xuất Excel
               </button>
               <button
                 className="bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center hover:bg-red-700 text-sm"

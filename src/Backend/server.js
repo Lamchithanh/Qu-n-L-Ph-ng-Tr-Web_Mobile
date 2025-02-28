@@ -7,6 +7,7 @@ import userRoutes from "./Routes/userRoutes.js";
 import landlordRoutes from "./Routes/landlordRoutes.js";
 import contractRoutes from "./Routes/contractRoutes.js";
 import roomRouter from "./Routes/roomRouter.js";
+import adLandlordRoutes from "./Routes/adlandlordRoutes.js";
 import path from "path";
 import fs from "fs";
 
@@ -46,6 +47,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/landlords", landlordRoutes);
 app.use("/api/contracts", contractRoutes);
 app.use("/api/rooms", roomRouter);
+
+//Router Super Admin
+app.use("/api/LandlordsManagement", adLandlordRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
