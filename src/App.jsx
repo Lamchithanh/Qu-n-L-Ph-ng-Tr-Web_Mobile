@@ -26,6 +26,9 @@ import AdminRoomsManagement from "./Frontend/pages/Admin/RoomsManagement.jsx";
 import AdminContractsManagement from "./Frontend/pages/Admin/AdminContractsManagement.jsx";
 import AdminServicesManagement from "./Frontend/pages/Admin/AdminServicesManagement.jsx";
 import InvoicesPaymentsManagement from "./Frontend/pages/Admin/InvoicesPaymentsManagement.jsx";
+import AdminInvoicesManagement from "./Frontend/pages/Admin/AdminInvoicesManagement.jsx";
+import AdminReviewsManagement from "./Frontend/pages/Admin/AdminReviewsManagement.jsx";
+import AdminUserManagement from "./Frontend/pages/Admin/AdminUserManagement.jsx";
 
 // Lazy load components với prefetch
 const Homepage = lazy(() => import("./Frontend/pages/HomePage"));
@@ -154,14 +157,20 @@ const App = () => {
                       path="services"
                       element={<AdminServicesManagement />}
                     />
-
+                    <Route
+                      path="invoices"
+                      element={<AdminInvoicesManagement />}
+                    />
                     <Route
                       path="payments"
                       element={<InvoicesPaymentsManagement />}
                     />
-                    {/* <Route path="reviews" element={<ReviewsManagement />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="settings" element={<AdminSettings />} /> */}
+                    <Route
+                      path="reviews"
+                      element={<AdminReviewsManagement />}
+                    />
+                    <Route path="users" element={<AdminUserManagement />} />
+                    {/*<Route path="settings" element={<AdminSettings />} /> */}
                   </Route>
                 </Routes>
               </Suspense>
