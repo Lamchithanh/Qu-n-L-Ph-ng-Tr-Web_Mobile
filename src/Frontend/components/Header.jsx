@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import styles from "../../Style/Header.module.scss";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
+import axios from "axios";
 
 const DEFAULT_AVATAR =
   "https://i.pinimg.com/736x/52/46/49/524649971a55b2f3a0dae1d537c61098.jpg";
@@ -28,31 +29,58 @@ const Header = () => {
       }
 
       try {
-        const response = await fetch(`${CONFIG.API_URL}/users/profile`, {
+        const response = await axios.get(`${CONFIG.API_URL}/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.ok) {
-          const userData = await response.json();
-          setIsLoggedIn(true);
-          setUserInfo({
-            name: userData.full_name || userData.username,
-            avatar: userData.avatar || DEFAULT_AVATAR,
-            role: userData.role || "tenant", // Lưu role từ response
-          });
-        } else {
-          handleLogout();
-        }
+        // Sử dụng response.data thay vì response.json()
+        const userData = response.data;
+        setIsLoggedIn(true);
+        setUserInfo({
+          name: userData.full_name || userData.username,
+          avatar: userData.avatar || DEFAULT_AVATAR,
+          role: userData.role || "tenant",
+        });
       } catch (error) {
         console.error("Lỗi khi lấy thông tin user:", error);
         handleLogout();
       }
     };
 
+    // Gọi checkAuth ngay khi component mount
     checkAuth();
+
+    // Thêm event listener để kiểm tra token khi localStorage thay đổi
+    const handleStorageChange = (e) => {
+      if (e.key === "userToken") {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
+
+  // Sửa lại handleLogout để reload trang hoặc update state
+  const handleLogout = () => {
+    localStorage.removeItem("userToken");
+    setIsLoggedIn(false);
+    setShowUserMenu(false);
+    setUserInfo({
+      name: "",
+      avatar: DEFAULT_AVATAR,
+      role: "",
+    });
+    showToast("Đăng xuất thành công", "success");
+
+    // Điều hướng về trang chủ
+    navigate("/");
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,17 +101,6 @@ const Header = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showUserMenu]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    setIsLoggedIn(false);
-    setShowUserMenu(false);
-    setUserInfo({
-      name: "",
-      avatar: DEFAULT_AVATAR,
-    });
-    showToast("Đăng xuất thành công", "success"); // Thêm thông báo khi đăng xuất
-  };
 
   const handleMenuItemClick = () => {
     // Đóng menu khi click vào bất kỳ mục nào

@@ -80,6 +80,11 @@ const AdminDashboardLayout = () => {
       path: "/admin/users",
       icon: <User size={20} />,
     },
+    {
+      title: "Quản lý chất lượng nước",
+      path: "/admin/settings",
+      icon: <Settings size={20} />,
+    },
   ];
 
   // Mẫu thông báo

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios"; // Đảm bảo đã cài đặt axios
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import {
   User,
@@ -10,40 +11,185 @@ import {
   CreditCard,
   AlertCircle,
   Home,
-  Bell, // Thêm icon mới
-  Wrench, // Icon cho yêu cầu bảo trì
+  Bell,
+  Wrench,
 } from "lucide-react";
 import styles from "../../Style/ProfilePage.module.scss";
 import RoomDetailModal from "../Contexts/RoomDetailModal";
 import { useNavigate } from "react-router-dom";
-
+import { CONFIG } from "../config/config";
+import { useToast } from "../Contexts/ToastContext";
+import defaultAvatar from "../../Assets/cabipara.jpg";
 const ProfilePage = () => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [scrolled, setScrolled] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [tempData, setTempData] = useState({});
   const [userData, setUserData] = useState({
-    fullName: "Lê Văn A",
-    email: "tenant1@example.com",
-    phone: "0901234569",
-    idCard: "001301000001",
-    address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
-    emergencyContact: "Lê Văn B - 0909123456",
-    role: "người thuê",
-    avatar:
-      "https://i.pinimg.com/736x/57/33/5b/57335bd4e9e9c0358952aafb375aea8a.jpg",
-    memberSince: "2023",
-    totalStay: "14 tháng",
-    rating: 4.8,
+    fullName: "",
+    email: "",
+    phone: "",
+    idCard: "",
+    address: "",
+    emergencyContact: "",
+    role: "",
+    avatar: "",
+    memberSince: "",
+    totalStay: "",
+    rating: 0,
     paymentHistory: {
-      onTime: 85,
-      late: 15,
-      total: 100,
+      onTime: 0,
+      late: 0,
+      total: 0,
     },
   });
+  const [rentalHistory, setRentalHistory] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Xử lý scroll
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const response = await axios.get(`${CONFIG.API_URL}/users/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const profileData = response.data;
+
+        // Log để debug dữ liệu profile
+        console.log(
+          "Profile data received:",
+          JSON.stringify(profileData, null, 2)
+        );
+        console.log("CCCD from profile:", profileData.cccd);
+        console.log(
+          "ID card from tenant_info:",
+          profileData.tenant_info?.id_card_number
+        );
+
+        // Cập nhật state với dữ liệu từ API, ưu tiên lấy cccd từ user trước
+        setUserData({
+          fullName: profileData.full_name || "Chưa cập nhật",
+          email: profileData.email || "Chưa cập nhật",
+          phone: profileData.phone || "Chưa cập nhật",
+          idCard:
+            profileData.cccd ||
+            profileData.tenant_info?.id_card_number ||
+            "Chưa cập nhật",
+          address:
+            profileData.tenant_info?.permanent_address || "Chưa cập nhật",
+          emergencyContact:
+            profileData.tenant_info?.emergency_contact || "Chưa cập nhật",
+          role: profileData.role || "Người dùng",
+          avatar: profileData.avatar || "/path/to/default-avatar.png",
+          memberSince: profileData.created_at
+            ? new Date(profileData.created_at).getFullYear().toString()
+            : "Chưa xác định",
+          totalStay: `${profileData.stats?.total_stay_months || 0} tháng`,
+          rating: profileData.rating || 0,
+          paymentHistory: profileData.stats?.payment_history || {
+            onTime: 0,
+            late: 0,
+            total: 0,
+          },
+        });
+
+        // Cập nhật lịch sử thuê phòng
+        setRentalHistory(
+          profileData.rental_history?.map((room) => ({
+            id: room.id,
+            roomNumber: room.room_number || "Chưa xác định",
+            period:
+              room.start_date && room.end_date
+                ? `${new Date(
+                    room.start_date
+                  ).toLocaleDateString()} - ${new Date(
+                    room.end_date
+                  ).toLocaleDateString()}`
+                : "Chưa xác định",
+            status: room.status || "unknown",
+            monthlyRent: room.price
+              ? `${room.price.toLocaleString()}đ`
+              : "Chưa xác định",
+            floor: room.floor || "Chưa xác định",
+            area: room.area ? `${room.area}m²` : "Chưa xác định",
+          })) || []
+        );
+
+        // Cập nhật hóa đơn
+        setInvoices(
+          profileData.invoices
+            ?.sort((a, b) => {
+              const statusOrder = { pending: 1, late: 2, paid: 3 };
+              return statusOrder[a.status] - statusOrder[b.status];
+            })
+            .map((invoice) => ({
+              id: invoice.id,
+              month:
+                invoice.month && invoice.year
+                  ? `Tháng ${invoice.month}/${invoice.year}`
+                  : "Chưa xác định",
+              total: invoice.total_amount
+                ? `${invoice.total_amount.toLocaleString()}đ`
+                : "Chưa xác định",
+              status: invoice.status || "pending",
+              dueDate: invoice.due_date
+                ? new Date(invoice.due_date).toLocaleDateString()
+                : "Chưa xác định",
+              paymentDate: invoice.payment_date
+                ? new Date(invoice.payment_date).toLocaleDateString()
+                : null,
+              breakdown: invoice.services_fee
+                ? JSON.parse(invoice.services_fee)
+                : {},
+            })) || []
+        );
+
+        // Cập nhật yêu cầu bảo trì
+        setMaintenanceRequests(profileData.maintenance_requests || []);
+
+        // Cập nhật thông báo
+        setNotifications(profileData.notifications || []);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching profile data:", err);
+
+        // Xử lý lỗi token
+        if (
+          err.response &&
+          (err.response.status === 401 || err.response.status === 403)
+        ) {
+          localStorage.removeItem("userToken");
+          navigate("/login");
+          return;
+        }
+
+        setError(err);
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [navigate]);
+
+  // Xử lý scroll (giữ nguyên)
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -52,15 +198,123 @@ const ProfilePage = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Các hàm xử lý sự kiện
+  // Các hàm xử lý sự kiện (giữ nguyên như cũ)
   const handleEdit = () => {
     setIsEditing(true);
-    setTempData(userData);
+    setTempData({
+      fullName: userData.fullName,
+      email: userData.email,
+      phone: userData.phone,
+      idCard: userData.idCard,
+      // Các trường khác nếu cần
+    });
   };
 
-  const handleSave = () => {
-    setUserData(tempData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("userToken");
+
+      // Kiểm tra token
+      if (!token) {
+        showToast("Phiên đăng nhập đã hết hạn", "error");
+        navigate("/login");
+        return;
+      }
+
+      // Debug: Log dữ liệu trước khi gửi
+      console.log("tempData:", tempData);
+      console.log("userData:", userData);
+
+      // Chuẩn bị dữ liệu cần cập nhật
+      const updateData = {
+        full_name: tempData.fullName,
+        phone: tempData.phone,
+        cccd: tempData.idCard,
+      };
+
+      // Debug: Log dữ liệu trước khi gửi
+      console.log("updateData:", updateData);
+
+      // Gọi API cập nhật
+      const response = await axios.put(
+        `${CONFIG.API_URL}/users/profile-updateUser`, // Sửa endpoint tại đây
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Debug: Log response chi tiết
+      console.log(
+        "API Response full detail:",
+        JSON.stringify(response.data, null, 2)
+      );
+      console.log(
+        "User from response:",
+        JSON.stringify(response.data.user, null, 2)
+      );
+      console.log("CCCD value in response:", response.data.user?.cccd);
+
+      // Cập nhật state với dữ liệu mới
+      if (response.data.user) {
+        const newUserData = {
+          ...userData,
+          fullName: response.data.user.full_name || userData.fullName,
+          phone: response.data.user.phone || userData.phone,
+          idCard: response.data.user.cccd || userData.idCard,
+        };
+
+        console.log("Previous userData:", JSON.stringify(userData, null, 2));
+        console.log(
+          "New userData to be set:",
+          JSON.stringify(newUserData, null, 2)
+        );
+
+        setUserData(newUserData);
+      }
+
+      // Hiển thị thông báo thành công
+      showToast("Cập nhật thông tin thành công", "success");
+
+      // Thoát chế độ chỉnh sửa
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+
+      // Kiểm tra và log chi tiết lỗi
+      if (error.response) {
+        console.error(
+          "Error response:",
+          JSON.stringify(error.response.data, null, 2)
+        );
+        showToast(
+          error.response.data?.message || "Lỗi cập nhật thông tin",
+          "error"
+        );
+      } else {
+        console.error("Error details:", error.message);
+        showToast("Lỗi kết nối. Vui lòng thử lại.", "error");
+      }
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    // Ánh xạ tên trường để phù hợp với API
+    const fieldMappings = {
+      fullName: "full_name",
+      email: "email",
+      phone: "phone",
+    };
+
+    setTempData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleCancel = () => {
@@ -68,89 +322,17 @@ const ProfilePage = () => {
     setTempData(userData);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setTempData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Hàm xử lý chọn phòng
+  // Các hàm khác giữ nguyên như ban đầu
   const handleRoomSelect = (room) => {
     setSelectedRoom(room);
   };
 
-  // Hàm đóng modal chi tiết phòng
   const handleCloseRoomDetail = () => {
     setSelectedRoom(null);
   };
 
   // Màu sắc cho biểu đồ
   const COLORS = ["#4f46e5", "#ef4444"];
-
-  const [rentalHistory] = useState([
-    {
-      id: 1,
-      roomNumber: "102",
-      period: "Tháng 1/2024 - Hiện tại",
-      status: "current",
-      monthlyRent: "3.500.000đ",
-      floor: 1,
-      area: "30,0m²",
-    },
-    {
-      id: 2,
-      roomNumber: "301",
-      period: "Tháng 1/2023 - Tháng 12/2023",
-      status: "past",
-      monthlyRent: "3.400.000đ",
-      floor: 3,
-      area: "25,5m²",
-    },
-  ]);
-
-  const [invoices] = useState(
-    [
-      {
-        id: 1,
-        month: "Tháng 1/2024",
-        total: "4.125.000đ",
-        status: "paid",
-        dueDate: "05/01/2024",
-        paymentDate: "03/01/2024",
-        breakdown: {
-          rent: "3.500.000đ",
-          electricity: "350.000đ",
-          water: "75.000đ",
-          internet: "200.000đ",
-        },
-      },
-      {
-        id: 2,
-        month: "Tháng 2/2024",
-        total: "4.225.000đ",
-        status: "pending",
-        dueDate: "05/02/2024",
-        breakdown: {
-          rent: "3.500.000đ",
-          electricity: "420.000đ",
-          water: "105.000đ",
-          internet: "200.000đ",
-        },
-      },
-    ].sort((a, b) => {
-      // Define the order of statuses
-      const statusOrder = {
-        pending: 1,
-        late: 2,
-        paid: 3,
-      };
-
-      // Sort based on the predefined order
-      return statusOrder[a.status] - statusOrder[b.status];
-    })
-  );
 
   // Navigation items
   const navItems = [
@@ -240,7 +422,7 @@ const ProfilePage = () => {
         <div className={styles.headerContent}>
           <div className={styles.avatarSection}>
             <img
-              src={userData.avatar}
+              src={userData.avatar || defaultAvatar}
               alt="Ảnh đại diện"
               className={styles.avatar}
             />
@@ -318,6 +500,7 @@ const ProfilePage = () => {
       <div className={styles.content}>
         {activeTab === "profile" && (
           <div className={styles.profileGrid}>
+            {/* Họ và tên */}
             <div className={styles.fieldGroup}>
               <User className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
@@ -329,6 +512,7 @@ const ProfilePage = () => {
                     value={tempData.fullName}
                     onChange={handleChange}
                     className={styles.fieldInput}
+                    maxLength={100} // Giới hạn độ dài
                   />
                 ) : (
                   <div className={styles.fieldValue}>{userData.fullName}</div>
@@ -336,24 +520,16 @@ const ProfilePage = () => {
               </div>
             </div>
 
+            {/* Email - Hạn chế chỉnh sửa */}
             <div className={styles.fieldGroup}>
               <Mail className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
                 <label className={styles.fieldLabel}>Email</label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={tempData.email}
-                    onChange={handleChange}
-                    className={styles.fieldInput}
-                  />
-                ) : (
-                  <div className={styles.fieldValue}>{userData.email}</div>
-                )}
+                <div className={styles.fieldValue}>{userData.email}</div>
               </div>
             </div>
 
+            {/* Số điện thoại */}
             <div className={styles.fieldGroup}>
               <Phone className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
@@ -365,6 +541,8 @@ const ProfilePage = () => {
                     value={tempData.phone}
                     onChange={handleChange}
                     className={styles.fieldInput}
+                    pattern="[0-9]{10,11}" // Validate số điện thoại
+                    title="Số điện thoại phải có 10-11 chữ số"
                   />
                 ) : (
                   <div className={styles.fieldValue}>{userData.phone}</div>
@@ -372,6 +550,7 @@ const ProfilePage = () => {
               </div>
             </div>
 
+            {/* CCCD/CMND */}
             <div className={styles.fieldGroup}>
               <CreditCard className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
@@ -383,6 +562,8 @@ const ProfilePage = () => {
                     value={tempData.idCard}
                     onChange={handleChange}
                     className={styles.fieldInput}
+                    pattern="\d{9}(\d{3})?" // Validate CCCD (9 hoặc 12 số)
+                    title="Số CCCD phải có 9 hoặc 12 chữ số"
                   />
                 ) : (
                   <div className={styles.fieldValue}>{userData.idCard}</div>
@@ -390,41 +571,23 @@ const ProfilePage = () => {
               </div>
             </div>
 
+            {/* Địa chỉ - Không cho phép chỉnh sửa trực tiếp tại đây */}
             <div className={styles.fieldGroup}>
               <MapPin className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
                 <label className={styles.fieldLabel}>Địa chỉ</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="address"
-                    value={tempData.address}
-                    onChange={handleChange}
-                    className={styles.fieldInput}
-                  />
-                ) : (
-                  <div className={styles.fieldValue}>{userData.address}</div>
-                )}
+                <div className={styles.fieldValue}>{userData.address}</div>
               </div>
             </div>
 
+            {/* Liên hệ khẩn cấp - Có thể cần một form riêng để cập nhật */}
             <div className={styles.fieldGroup}>
               <AlertCircle className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
                 <label className={styles.fieldLabel}>Liên hệ khẩn cấp</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="emergencyContact"
-                    value={tempData.emergencyContact}
-                    onChange={handleChange}
-                    className={styles.fieldInput}
-                  />
-                ) : (
-                  <div className={styles.fieldValue}>
-                    {userData.emergencyContact}
-                  </div>
-                )}
+                <div className={styles.fieldValue}>
+                  {userData.emergencyContact}
+                </div>
               </div>
             </div>
 
@@ -573,15 +736,29 @@ const ProfilePage = () => {
               {/* Thống kê yêu cầu bảo trì */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-green-600 text-lg font-semibold">2</div>
+                  <div className="text-green-600 text-lg font-semibold">
+                    {
+                      maintenanceRequests.filter(
+                        (req) => req.status === "completed"
+                      ).length
+                    }
+                  </div>
                   <div className="text-sm text-gray-600">Đã hoàn thành</div>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="text-yellow-600 text-lg font-semibold">1</div>
+                  <div className="text-yellow-600 text-lg font-semibold">
+                    {
+                      maintenanceRequests.filter(
+                        (req) => req.status === "in_progress"
+                      ).length
+                    }
+                  </div>
                   <div className="text-sm text-gray-600">Đang xử lý</div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-blue-600 text-lg font-semibold">3</div>
+                  <div className="text-blue-600 text-lg font-semibold">
+                    {maintenanceRequests.length}
+                  </div>
                   <div className="text-sm text-gray-600">Tổng yêu cầu</div>
                 </div>
               </div>
@@ -590,26 +767,34 @@ const ProfilePage = () => {
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <h3 className="text-lg font-semibold mb-4">Yêu cầu gần đây</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Sửa vòi nước bồn rửa</div>
-                      <div className="text-sm text-gray-500">20/02/2024</div>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                      Đã xử lý
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">
-                        Thay bóng đèn phòng khách
+                  {maintenanceRequests.slice(0, 2).map((request) => (
+                    <div
+                      key={request.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div>
+                        <div className="font-medium">{request.description}</div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">18/02/2024</div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          request.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : request.status === "in_progress"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {request.status === "completed"
+                          ? "Đã xử lý"
+                          : request.status === "in_progress"
+                          ? "Đang xử lý"
+                          : "Chờ xử lý"}
+                      </span>
                     </div>
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                      Đang xử lý
-                    </span>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -624,17 +809,26 @@ const ProfilePage = () => {
               {/* Thống kê thông báo */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-red-600 text-lg font-semibold">1</div>
+                  <div className="text-red-600 text-lg font-semibold">
+                    {
+                      notifications.filter((n) => n.severity === "urgent")
+                        .length
+                    }
+                  </div>
                   <div className="text-sm text-gray-600">
                     Thông báo khẩn cấp
                   </div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-blue-600 text-lg font-semibold">2</div>
+                  <div className="text-blue-600 text-lg font-semibold">
+                    {notifications.filter((n) => !n.is_read).length}
+                  </div>
                   <div className="text-sm text-gray-600">Chưa đọc</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-gray-600 text-lg font-semibold">5</div>
+                  <div className="text-gray-600 text-lg font-semibold">
+                    {notifications.length}
+                  </div>
                   <div className="text-sm text-gray-600">Tổng thông báo</div>
                 </div>
               </div>
@@ -645,20 +839,33 @@ const ProfilePage = () => {
                   Thông báo gần đây
                 </h3>
                 <div className="space-y-4">
-                  <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded-lg">
-                    <div className="font-medium">Thanh Toán Quá Hạn</div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      Hóa đơn tiền phòng tháng này chưa được thanh toán
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`border-l-4 p-4 rounded-lg ${
+                        notification.severity === "urgent"
+                          ? "border-red-500 bg-red-50"
+                          : notification.severity === "high"
+                          ? "border-orange-500 bg-orange-50"
+                          : notification.severity === "medium"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-500 bg-gray-50"
+                      }`}
+                    >
+                      <div className="font-medium">{notification.title}</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {notification.content}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        {new Date(notification.created_at).toLocaleString()}
+                        {!notification.is_read && (
+                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            Chưa đọc
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2">Hôm nay</div>
-                  </div>
-                  <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-lg">
-                    <div className="font-medium">Hợp Đồng Mới</div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      Bạn có một hợp đồng thuê phòng mới cần ký kết ngay
-                    </div>
-                    <div className="text-xs text-gray-500 mt-2">Hôm qua</div>
-                  </div>
+                  ))}
                 </div>
               </div>
 

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   AlertTriangle,
   Camera,
@@ -6,19 +7,24 @@ import {
   XCircle,
   MessageCircle,
 } from "lucide-react";
+import { CONFIG } from "../config/config";
+import { useToast } from "../Contexts/ToastContext";
 import { Toolbar } from "@mui/material";
 
 const MaintenanceRequest = () => {
+  const { showToast } = useToast();
+  const [noContract, setNoContract] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    urgency: "normal",
+    urgency: "normal", // Đổi thành priority nếu cần
     category: "",
     images: [],
   });
 
   const [preview, setPreview] = useState([]);
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [recentRequests, setRecentRequests] = useState([]);
 
   const categories = [
     { id: "electricity", label: "Điện", icon: "⚡" },
@@ -29,24 +35,99 @@ const MaintenanceRequest = () => {
     { id: "other", label: "Khác", icon: "📝" },
   ];
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData({ ...formData, images: [...formData.images, ...files] });
+  // Fetch maintenance requests from API
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        const response = await axios.get(
+          `${CONFIG.API_URL}/users/maintenance-requests`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview((prev) => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
+        // Đảm bảo đúng cấu trúc dữ liệu trả về
+        if (response.data && response.data.maintenance_requests) {
+          setRecentRequests(response.data.maintenance_requests);
+        } else {
+          setRecentRequests(response.data || []);
+        }
 
-  const handleSubmit = (e) => {
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching maintenance requests:", error);
+
+        // Kiểm tra nếu lỗi là do không có hợp đồng
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.noActiveContract
+        ) {
+          setNoContract(true);
+        }
+
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, []);
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
+
+    // Validate form
+    if (!formData.title || !formData.description || !formData.category) {
+      showToast("Vui lòng điền đầy đủ thông tin", "error");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("userToken");
+      const formDataToSend = new FormData();
+
+      // Append form fields
+      Object.keys(formData).forEach((key) => {
+        if (key === "images") {
+          formData.images.forEach((image) => {
+            formDataToSend.append("images", image);
+          });
+        } else {
+          // Map urgency to priority nếu cần thiết
+          if (key === "urgency") {
+            formDataToSend.append("priority", formData[key]);
+          } else {
+            formDataToSend.append(key, formData[key]);
+          }
+        }
+      });
+
+      const response = await axios.post(
+        `${CONFIG.API_URL}/users/maintenance-requests`, // Đảm bảo sử dụng đúng endpoint
+        formDataToSend,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      // Add new request to list
+      const newRequest = response.data.maintenance_request_id
+        ? {
+            id: response.data.maintenance_request_id,
+            ...formData,
+            status: "pending",
+            created_at: new Date(),
+          }
+        : response.data;
+
+      setRecentRequests((prev) => [newRequest, ...prev]);
+
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -55,16 +136,152 @@ const MaintenanceRequest = () => {
         images: [],
       });
       setPreview([]);
-    }, 3000);
+
+      showToast("Gửi yêu cầu bảo trì thành công", "success");
+    } catch (error) {
+      console.error("Error submitting maintenance request:", error);
+
+      // Kiểm tra nếu lỗi là do không có hợp đồng
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.noActiveContract
+      ) {
+        setNoContract(true);
+        showToast("Bạn cần có hợp đồng thuê phòng để báo cáo sự cố", "error");
+      } else {
+        showToast("Không thể gửi yêu cầu bảo trì", "error");
+      }
+    }
   };
 
-  const removeImage = (index) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter((_, i) => i !== index),
+  // Image upload handler
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+
+    // Limit to 5 images
+    const newFiles = files.slice(0, 5 - formData.images.length);
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...newFiles],
+    }));
+
+    newFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview((prev) => [...prev, reader.result]);
+      };
+      reader.readAsDataURL(file);
     });
-    setPreview(preview.filter((_, i) => i !== index));
   };
+
+  // Remove image from preview
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+    setPreview((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Render recent requests list
+  const renderRecentRequestsList = () => {
+    if (loading) {
+      return (
+        <div className="text-center text-gray-500 py-4">
+          Đang tải yêu cầu...
+        </div>
+      );
+    }
+
+    if (recentRequests.length === 0) {
+      return (
+        <div className="text-center text-gray-500 py-10 bg-gray-50 rounded-lg">
+          <AlertTriangle className="mx-auto mb-4 text-gray-400" size={48} />
+          <p>Chưa có yêu cầu bảo trì nào</p>
+        </div>
+      );
+    }
+
+    return recentRequests.map((request) => (
+      <div
+        key={request.id}
+        className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between"
+      >
+        <div className="flex items-center space-x-4">
+          <div
+            className={`p-2 rounded-full ${
+              request.status === "completed"
+                ? "bg-green-100"
+                : request.status === "in_progress"
+                ? "bg-yellow-100"
+                : "bg-gray-100"
+            }`}
+          >
+            {categories.find((cat) => cat.id === request.category)?.icon ||
+              "📝"}
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-800">
+              {request.title || request.description}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {new Date(request.created_at).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-sm font-medium ${
+            request.status === "completed"
+              ? "bg-green-100 text-green-800"
+              : request.status === "in_progress"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {request.status === "completed"
+            ? "Đã xử lý"
+            : request.status === "in_progress"
+            ? "Đang xử lý"
+            : "Chờ xử lý"}
+        </span>
+      </div>
+    ));
+  };
+
+  // Main render function
+  if (noContract) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Báo cáo Sự cố
+          </h1>
+          <p className="text-gray-600">
+            Gửi báo cáo về các vấn đề cần sửa chữa hoặc hỗ trợ
+          </p>
+        </div>
+
+        <div className="text-center bg-yellow-50 p-8 rounded-lg my-6">
+          <AlertTriangle className="mx-auto text-yellow-500 mb-4" size={48} />
+          <h3 className="text-xl font-medium mb-2">
+            Chưa có hợp đồng thuê phòng
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Bạn cần có hợp đồng thuê phòng hoạt động để sử dụng tính năng báo
+            cáo sự cố.
+          </p>
+          <button
+            onClick={() => (window.location.href = "/rooms")}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+          >
+            Tìm phòng ngay
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -75,21 +292,6 @@ const MaintenanceRequest = () => {
         </p>
       </div>
 
-      {submitted && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center text-green-800">
-            <span className="flex-shrink-0 w-5 h-5">✓</span>
-            <div className="ml-2">
-              <h3 className="font-semibold">Gửi báo cáo thành công!</h3>
-              <p>
-                Chúng tôi đã nhận được báo cáo và sẽ xử lý trong thời gian sớm
-                nhất.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
           {/* Tiêu đề */}
@@ -99,13 +301,13 @@ const MaintenanceRequest = () => {
             </label>
             <input
               type="text"
-              required
               value={formData.title}
               onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
+                setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="VD: Bóng đèn phòng ngủ bị hỏng"
+              required
             />
           </div>
 
@@ -119,7 +321,9 @@ const MaintenanceRequest = () => {
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setFormData({ ...formData, category: cat.id })}
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, category: cat.id }))
+                  }
                   className={`flex items-center p-4 rounded-lg border transition-all ${
                     formData.category === cat.id
                       ? "border-indigo-500 bg-indigo-50"
@@ -154,7 +358,10 @@ const MaintenanceRequest = () => {
                     value={level}
                     checked={formData.urgency === level}
                     onChange={(e) =>
-                      setFormData({ ...formData, urgency: e.target.value })
+                      setFormData((prev) => ({
+                        ...prev,
+                        urgency: e.target.value,
+                      }))
                     }
                     className="sr-only"
                   />
@@ -183,21 +390,24 @@ const MaintenanceRequest = () => {
               Mô tả chi tiết
             </label>
             <textarea
-              required
               value={formData.description}
               onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
               }
               rows="4"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Mô tả chi tiết về vấn đề bạn đang gặp phải..."
+              required
             />
           </div>
 
           {/* Upload hình ảnh */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Hình ảnh đính kèm (không bắt buộc)
+              Hình ảnh đính kèm (không bắt buộc, tối đa 5 ảnh)
             </label>
             <div className="mt-2 flex flex-wrap gap-4">
               {preview.map((url, index) => (
@@ -216,17 +426,19 @@ const MaintenanceRequest = () => {
                   </button>
                 </div>
               ))}
-              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
-                <Camera className="w-8 h-8 text-gray-400" />
-                <span className="mt-2 text-sm text-gray-500">Thêm ảnh</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
+              {preview.length < 5 && (
+                <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
+                  <Camera className="w-8 h-8 text-gray-400" />
+                  <span className="mt-2 text-sm text-gray-500">Thêm ảnh</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
             </div>
           </div>
         </div>
@@ -243,64 +455,12 @@ const MaintenanceRequest = () => {
         </div>
       </form>
 
-      {/* Trạng thái các yêu cầu trước */}
+      {/* Các yêu cầu gần đây */}
       <div className="mt-12">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Các yêu cầu gần đây
         </h2>
-        <div className="space-y-4">
-          {[
-            {
-              id: 1,
-              title: "Sửa vòi nước bồn rửa",
-              status: "completed",
-              date: "20/02/2024",
-              category: "water",
-            },
-            {
-              id: 2,
-              title: "Thay bóng đèn phòng khách",
-              status: "processing",
-              date: "18/02/2024",
-              category: "electricity",
-            },
-          ].map((request) => (
-            <div
-              key={request.id}
-              className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-4">
-                <div
-                  className={`p-2 rounded-full ${
-                    request.status === "completed"
-                      ? "bg-green-100"
-                      : "bg-yellow-100"
-                  }`}
-                >
-                  {request.category === "water" && (
-                    <Toolbar className="w-5 h-5 text-blue-600" />
-                  )}
-                  {request.category === "electricity" && (
-                    <Toolbar className="w-5 h-5 text-yellow-600" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-800">{request.title}</h3>
-                  <p className="text-sm text-gray-500">{request.date}</p>
-                </div>
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  request.status === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                {request.status === "completed" ? "Đã xử lý" : "Đang xử lý"}
-              </span>
-            </div>
-          ))}
-        </div>
+        <div className="space-y-4">{renderRecentRequestsList()}</div>
       </div>
     </div>
   );

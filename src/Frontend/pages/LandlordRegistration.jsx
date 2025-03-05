@@ -18,7 +18,7 @@ import "aos/dist/aos.css";
 // import styles from "../../Style/LandlordRegistration.module.scss";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
-import Landlord from "../../assets/key.jpg";
+import Landlord from "../../assets/HeroImage12.jpg";
 
 const LandlordRegistration = () => {
   const navigate = useNavigate();

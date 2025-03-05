@@ -9,6 +9,8 @@ import contractRoutes from "./Routes/contractRoutes.js";
 import roomRouter from "./Routes/roomRouter.js";
 import path from "path";
 import fs from "fs";
+import cron from "node-cron";
+import passwordResetService from "./Services/passwordResetService.js";
 
 // Cấu hình môi trường
 dotenv.config({ path: ".env" });
@@ -31,6 +33,11 @@ app.use((req, res, next) => {
   next();
 });
 
+const maintenanceUploadDir = path.join(process.cwd(), "uploads/maintenance");
+if (!fs.existsSync(maintenanceUploadDir)) {
+  fs.mkdirSync(maintenanceUploadDir, { recursive: true });
+}
+
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -46,6 +53,17 @@ app.use("/api/users", userRoutes);
 app.use("/api/landlords", landlordRoutes);
 app.use("/api/contracts", contractRoutes);
 app.use("/api/rooms", roomRouter);
+
+// Thiết lập cron job để dọn dẹp mã reset hết hạn
+// Chạy hàng ngày lúc 3 giờ sáng
+cron.schedule("0 3 * * *", async () => {
+  try {
+    const count = await passwordResetService.cleanupExpiredResetCodes();
+    console.log(`Đã xóa ${count} mã reset hết hạn`);
+  } catch (error) {
+    console.error("Lỗi dọn dẹp mã reset:", error);
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

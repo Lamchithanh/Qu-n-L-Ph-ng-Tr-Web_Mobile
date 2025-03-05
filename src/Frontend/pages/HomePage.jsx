@@ -22,6 +22,7 @@ import RoomCard from "../components/RoomCard";
 import roomService from "../Service/roomService.js";
 import { useToast } from "../Contexts/ToastContext";
 import DefaultRoomImage from "../../assets/home_img.jpg"; // Add this import
+import HeroImage from "../../assets/Visitor_Reservation.gif";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -34,10 +35,29 @@ const HomePage = () => {
     minArea: "",
     maxArea: "",
   });
-
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [featuredRooms, setFeaturedRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  useEffect(() => {
+    // Cập nhật ngay lập tức khi component mount
+    setCurrentTime(new Date());
+
+    // Sau đó cập nhật mỗi giây
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchFeaturedRooms = async () => {
     try {
@@ -138,67 +158,84 @@ const HomePage = () => {
     <div className={styles.homePage}>
       {/* Hero Section */}
       <section className={styles.heroSection}>
-        <div className={styles.heroContent}>
-          <h1>Tìm Ngôi Nhà Mơ Ước Của Bạn</h1>
-          <p>Khám phá hàng nghìn căn hộ chất lượng cao với mức giá phù hợp</p>
+        <div className={styles.heroContainer}>
+          <div className={styles.heroImageContainer}>
+            <img
+              src={HeroImage}
+              alt="Ngôi nhà mơ ước"
+              className={styles.heroImage}
+            />
+          </div>
 
-          {/* Search Form */}
-          <form onSubmit={handleSearch} className={styles.searchForm}>
-            <div className={styles.searchGrid}>
-              <div className={styles.inputWrapper}>
-                <MapPin size={20} />
-                <input
-                  type="text"
-                  placeholder="Khu vực"
-                  value={searchParams.location}
-                  onChange={(e) =>
-                    setSearchParams({
-                      ...searchParams,
-                      location: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className={styles.inputWrapper}>
-                <DollarSign size={20} />
-                <select
-                  value={searchParams.priceRange}
-                  onChange={(e) =>
-                    setSearchParams({
-                      ...searchParams,
-                      priceRange: e.target.value,
-                    })
-                  }
-                >
-                  <option value="">Khoảng giá</option>
-                  <option value="0-2">Dưới 2 triệu</option>
-                  <option value="2-3">2 - 3 triệu</option>
-                  <option value="3-5">3 - 5 triệu</option>
-                  <option value="5+">Trên 5 triệu</option>
-                </select>
-              </div>
-
-              <div className={styles.inputWrapper}>
-                <Home size={20} />
-                <select
-                  value={searchParams.type}
-                  onChange={(e) =>
-                    setSearchParams({ ...searchParams, type: e.target.value })
-                  }
-                >
-                  <option value="">Loại nhà</option>
-                  <option value="room">Phòng trọ</option>
-                  <option value="apartment">Căn hộ mini</option>
-                  <option value="house">Nhà nguyên căn</option>
-                </select>
-              </div>
-
-              <button type="submit" className={styles.searchButton}>
-                Tìm Kiếm
-              </button>
+          <div className={styles.heroContentContainer}>
+            <div className={styles.operatingTime}>
+              <Clock size={42} className={styles.clockIcon} />
+              <span> {formatTime(currentTime)}</span>
             </div>
-          </form>
+
+            <h1 className={styles.heroTitle}>Tìm Ngôi Nhà Mơ Ước Của Bạn</h1>
+            <p className={styles.heroSubtitle}>
+              Khám phá hàng nghìn căn hộ chất lượng cao với mức giá phù hợp
+            </p>
+
+            {/* Search Form */}
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className={styles.searchGrid}>
+                <div className={styles.inputWrapper}>
+                  <MapPin size={20} />
+                  <input
+                    type="text"
+                    placeholder="Khu vực"
+                    value={searchParams.location}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        location: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className={styles.inputWrapper}>
+                  <DollarSign size={20} />
+                  <select
+                    value={searchParams.priceRange}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        priceRange: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Khoảng giá</option>
+                    <option value="0-2">Dưới 2 triệu</option>
+                    <option value="2-3">2 - 3 triệu</option>
+                    <option value="3-5">3 - 5 triệu</option>
+                    <option value="5+">Trên 5 triệu</option>
+                  </select>
+                </div>
+
+                <div className={styles.inputWrapper}>
+                  <Home size={20} />
+                  <select
+                    value={searchParams.type}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, type: e.target.value })
+                    }
+                  >
+                    <option value="">Loại nhà</option>
+                    <option value="room">Phòng trọ</option>
+                    <option value="apartment">Căn hộ mini</option>
+                    <option value="house">Nhà nguyên căn</option>
+                  </select>
+                </div>
+
+                <button type="submit" className={styles.searchButton}>
+                  Tìm Kiếm
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </section>
 

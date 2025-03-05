@@ -29,6 +29,8 @@ import InvoicesPaymentsManagement from "./Frontend/pages/Admin/InvoicesPaymentsM
 import AdminInvoicesManagement from "./Frontend/pages/Admin/AdminInvoicesManagement.jsx";
 import AdminReviewsManagement from "./Frontend/pages/Admin/AdminReviewsManagement.jsx";
 import AdminUserManagement from "./Frontend/pages/Admin/AdminUserManagement.jsx";
+import AquacultureDashboard from "./Frontend/pages/Admin/AdminSettings.jsx";
+import ForgotPassword from "./Frontend/Contexts/ForgotPassword.jsx";
 
 // Lazy load components với prefetch
 const Homepage = lazy(() => import("./Frontend/pages/HomePage"));
@@ -119,6 +121,7 @@ const App = () => {
                     />
                   </Route>
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route
                     path="/register-landlord"
                     element={<LandlordRegistration />}
@@ -170,7 +173,7 @@ const App = () => {
                       element={<AdminReviewsManagement />}
                     />
                     <Route path="users" element={<AdminUserManagement />} />
-                    {/*<Route path="settings" element={<AdminSettings />} /> */}
+                    <Route path="settings" element={<AquacultureDashboard />} />
                   </Route>
                 </Routes>
               </Suspense>

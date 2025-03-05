@@ -7,12 +7,13 @@ import {
   UserPlus,
   Building,
   AlertCircle,
+  CreditCard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import styles from "../../Style/Auth.module.scss";
-import image from "../../assets/image-removebg-preview.png";
+import image from "../../assets/HeroImage10.jpg";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
 
@@ -27,6 +28,7 @@ const Auth = () => {
     confirmPassword: "",
     phone: "",
     full_name: "",
+    cccd: "",
     role: "tenant",
   });
   const [error, setError] = useState("");
@@ -70,6 +72,11 @@ const Auth = () => {
       return false;
     }
 
+    if (formData.cccd && !/^\d{9,12}$/.test(formData.cccd)) {
+      setError("Số CCCD không hợp lệ");
+      return false;
+    }
+
     return true;
   };
 
@@ -109,13 +116,25 @@ const Auth = () => {
           });
         }
       } else {
-        // ... phần đăng ký
+        showToast("Đăng ký thành công! Vui lòng đăng nhập.", "success");
+        setIsLogin(true);
+        setFormData({
+          username: formData.username,
+          email: formData.email,
+          password: "",
+          role: "tenant",
+        });
       }
     } catch (err) {
       console.error("Error:", err);
       showToast(err.message, "error");
       setError(err.message);
     }
+  };
+
+  // Điều hướng đến trang quên mật khẩu
+  const navigateToForgotPassword = () => {
+    navigate("/forgot-password");
   };
 
   return (
@@ -222,6 +241,22 @@ const Auth = () => {
                   <div
                     className={styles.inputGroup}
                     data-aos="fade-up"
+                    data-aos-delay="650"
+                  >
+                    <CreditCard className={styles.inputIcon} size={20} />
+                    <input
+                      className={styles.input}
+                      type="text"
+                      name="cccd"
+                      placeholder="Số CCCD"
+                      value={formData.cccd}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div
+                    className={styles.inputGroup}
+                    data-aos="fade-up"
                     data-aos-delay="700"
                   >
                     <Phone className={styles.inputIcon} size={20} />
@@ -271,6 +306,23 @@ const Auth = () => {
                 </div>
               )}
 
+              {/* Thêm link quên mật khẩu */}
+              {isLogin && (
+                <div
+                  className={styles.forgotPassword}
+                  data-aos="fade-up"
+                  data-aos-delay="850"
+                >
+                  <button
+                    type="button"
+                    className={styles.forgotPasswordButton}
+                    onClick={navigateToForgotPassword}
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
+              )}
+
               {error && (
                 <div className={styles.error} data-aos="shake">
                   <AlertCircle size={18} />
@@ -309,6 +361,7 @@ const Auth = () => {
                         confirmPassword: "",
                         phone: "",
                         full_name: "",
+                        cccd: "",
                         role: "tenant",
                       });
                     }}
@@ -322,6 +375,14 @@ const Auth = () => {
                     onClick={() => navigate("/register-landlord")}
                   >
                     Đăng ký làm chủ trọ
+                  </button>
+                  <br />
+                  <button
+                    className={`${styles.switchButton} ${styles.landlordButton}`}
+                    type="button"
+                    onClick={() => navigate("/")}
+                  >
+                    Quay lại trang chủ
                   </button>
                 </>
               ) : (
