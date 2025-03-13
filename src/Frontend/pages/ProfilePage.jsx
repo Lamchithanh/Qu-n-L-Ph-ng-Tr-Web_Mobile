@@ -19,7 +19,7 @@ import RoomDetailModal from "../Contexts/RoomDetailModal";
 import { useNavigate } from "react-router-dom";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
-import defaultAvatar from "@/assets/cabipara.jpg";
+import defaultAvatar from "../../assets/cabipara.jpg";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
