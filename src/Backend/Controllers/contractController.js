@@ -89,25 +89,47 @@ export const getAllContracts = async (req, res) => {
   }
 };
 
-// Lấy chi tiết hợp đồng
 export const getContractById = async (req, res) => {
   try {
+    const contractId = req.params.id;
+    const userId = req.user.id;
+
+    // 2. Lấy hợp đồng theo ID
+    // Sửa đổi truy vấn
     const [contract] = await executeQuery(
-      `SELECT c.*, r.title as room_name, r.address as room_address, r.area, 
-       r.images, r.description as room_description, r.price,
-       t.full_name as tenant_name, t.id_card_number, u.phone as tenant_phone, u.email as tenant_email,
-       l.id as landlord_id, l.id_card_number as landlord_id_card, 
-       lu.full_name as landlord_name, lu.phone as landlord_phone, lu.email as landlord_email 
-       FROM contracts c 
-       LEFT JOIN rooms r ON c.room_id = r.id 
-       LEFT JOIN tenants t ON c.tenant_id = t.id
-       LEFT JOIN users u ON t.user_id = u.id
-       LEFT JOIN landlords l ON r.landlord_id = l.id
-       LEFT JOIN users lu ON l.user_id = lu.id
-       WHERE c.id = ? AND c.deleted_at IS NULL`,
-      [req.params.id]
+      `SELECT 
+    c.id, 
+     c.display_code,
+    c.start_date, 
+    c.end_date, 
+    c.status, 
+    c.monthly_rent, 
+    c.deposit_amount,
+    r.id AS room_id,
+    r.title AS room_name, 
+    r.address AS room_address, 
+    r.area, 
+    r.images,
+    r.room_number,
+    l.id AS landlord_id,
+    lu.full_name AS landlord_name,
+    lu.phone AS landlord_phone,
+    lu.email AS landlord_email,
+    t.full_name AS tenant_name,
+    u.phone AS tenant_phone,
+    u.email AS tenant_email,
+    t.id_card_number AS tenant_id_card
+  FROM contracts c
+  LEFT JOIN rooms r ON c.room_id = r.id
+  LEFT JOIN tenants t ON c.tenant_id = t.id
+  LEFT JOIN users u ON t.user_id = u.id
+  LEFT JOIN landlords l ON r.landlord_id = l.id
+  LEFT JOIN users lu ON l.user_id = lu.id
+  WHERE c.id = ?`,
+      [contractId]
     );
 
+    // Nếu không tìm thấy hợp đồng
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -115,7 +137,7 @@ export const getContractById = async (req, res) => {
       });
     }
 
-    // Parse hình ảnh từ JSON
+    // Xử lý hình ảnh phòng
     let roomImage = "https://via.placeholder.com/400x300";
     if (contract.images) {
       try {
@@ -126,86 +148,96 @@ export const getContractById = async (req, res) => {
         if (images && images.length > 0) {
           roomImage = images[0];
         }
-      } catch (e) {
-        console.error("Lỗi khi parse images:", e);
+      } catch (error) {
+        console.error("Lỗi parse hình ảnh:", error);
       }
     }
 
-    // Lấy các điều khoản của hợp đồng
+    // Lấy dịch vụ
+    const services = await executeQuery(
+      `SELECT 
+        s.id, 
+        s.name, 
+        s.price_unit, 
+        s.price,
+        su.previous_reading,
+        su.current_reading,
+        su.usage_amount,
+        ROUND(s.price * COALESCE(su.usage_amount, 0), 2) as total_amount
+      FROM services s
+      LEFT JOIN service_usage su ON s.id = su.service_id 
+        AND su.contract_id = ?
+        AND su.month = MONTH(CURRENT_DATE())
+        AND su.year = YEAR(CURRENT_DATE())
+      WHERE s.status = true
+      ORDER BY s.name`,
+      [contractId]
+    );
+
+    // Điều khoản mặc định
     const terms = [
       {
         id: 1,
         title: "1. Điều khoản chung",
         content:
-          "Hai bên tự nguyện thỏa thuận và cam kết thực hiện đúng các điều khoản sau đây...",
+          "Hai bên tự nguyện thỏa thuận và cam kết thực hiện đúng các điều khoản trong hợp đồng thuê phòng này.",
       },
       {
         id: 2,
         title: "2. Thời hạn cho thuê",
-        content:
-          "Thời hạn thuê nhà là 12 tháng kể từ ngày ký hợp đồng. Có thể gia hạn nếu hai bên đồng ý...",
-      },
-      {
-        id: 3,
-        title: "3. Giá thuê và thanh toán",
-        content:
-          "Giá thuê được thanh toán hàng tháng vào ngày 05. Bao gồm tiền thuê và các chi phí phát sinh...",
-      },
-      {
-        id: 4,
-        title: "4. Quyền và nghĩa vụ bên thuê",
-        content:
-          "Bên thuê có trách nhiệm giữ gìn nhà ở và tài sản trong nhà, thanh toán đúng hạn...",
-      },
-      {
-        id: 5,
-        title: "5. Quyền và nghĩa vụ bên cho thuê",
-        content:
-          "Bên cho thuê có trách nhiệm bảo đảm quyền sử dụng nhà ở, bảo trì sửa chữa khi cần...",
+        content: `Thời hạn thuê phòng từ ${formatDate(
+          contract.start_date
+        )} đến ${formatDate(
+          contract.end_date
+        )}. Hợp đồng có thể gia hạn nếu hai bên đồng ý.`,
       },
     ];
 
+    // Định dạng dữ liệu trả về
     const formattedContract = {
-      id: `HD${contract.id.toString().padStart(4, "0")}`,
-      status: contract.status || "pending",
+      id:
+        contract.display_code || `HD${contract.id.toString().padStart(4, "0")}`,
+      status: contract.status,
       startDate: contract.start_date,
       endDate: contract.end_date,
       room: {
         id: contract.room_id,
-        name: contract.room_name || "Phòng không có tên",
-        address: contract.room_address || "Không có địa chỉ",
-        type: "Phòng trọ",
+        name: contract.room_name,
+        number: contract.room_number,
+        address: contract.room_address,
         area: contract.area ? `${contract.area}m²` : "Chưa cập nhật",
         image: roomImage,
-        description: contract.room_description || "Không có mô tả",
       },
       tenant: {
-        id: contract.tenant_id,
-        name: contract.tenant_name || "Chưa có người thuê",
-        id_card: contract.id_card_number || "Chưa cập nhật", // Sửa thành id_card
-        phone: contract.tenant_phone || "Chưa cập nhật",
-        email: contract.tenant_email || "Chưa cập nhật",
+        name: contract.tenant_name,
+        phone: contract.tenant_phone,
+        email: contract.tenant_email,
       },
       landlord: {
         id: contract.landlord_id,
-        name: contract.landlord_name || "Chưa có chủ trọ",
-        id_card: contract.landlord_id_card || "Thông tin bảo mật", // Sửa thành id_card
-        phone: contract.landlord_phone || "Chưa cập nhật",
-        email: contract.landlord_email || "Chưa cập nhật",
+        name: contract.landlord_name,
+        phone: contract.landlord_phone,
+        email: contract.landlord_email,
       },
       payment: {
         rent: parseFloat(contract.monthly_rent || 0),
         deposit: parseFloat(contract.deposit_amount || 0),
-        services: [
-          { name: "Phí điện", amount: "3,500 VNĐ/kWh" },
-          { name: "Phí nước", amount: "25,000 VNĐ/m³" },
-          { name: "Internet", amount: "200,000 VNĐ/tháng" },
-          { name: "Phí dịch vụ", amount: "200,000 VNĐ/tháng" },
-        ],
+        services: services.map((service) => ({
+          id: service.id,
+          name: service.name,
+          price_unit: service.price_unit,
+          price: service.price,
+          previous_reading: service.previous_reading || 0,
+          current_reading: service.current_reading || 0,
+          usage_amount: service.usage_amount || 0,
+          total_amount: parseFloat(service.total_amount || 0),
+        })),
       },
       terms: terms,
-      created_at: contract.created_at,
-      updated_at: contract.updated_at,
+      contract_duration: calculateContractDuration(
+        contract.start_date,
+        contract.end_date
+      ),
     };
 
     res.status(200).json({
@@ -216,7 +248,262 @@ export const getContractById = async (req, res) => {
     console.error("Lỗi khi lấy chi tiết hợp đồng:", error);
     res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy chi tiết hợp đồng",
+      message: "Lỗi hệ thống khi lấy chi tiết hợp đồng",
+      error: error.message,
+    });
+  }
+};
+
+// Lấy chi tiết hợp đồng
+export const getCurrentContract = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Kiểm tra xem user có phải tenant không
+    const [tenantInfo] = await executeQuery(
+      `SELECT id FROM tenants WHERE user_id = ?`,
+      [userId]
+    );
+
+    // Nếu không phải tenant, trả về thông báo phù hợp
+    if (!tenantInfo) {
+      return res.status(404).json({
+        success: false,
+        message: "Bạn chưa đăng ký là người thuê",
+        action: "register_tenant",
+      });
+    }
+
+    // 2. Lấy hợp đồng hiện tại
+    const [contract] = await executeQuery(
+      `SELECT 
+        c.id, 
+        c.start_date, 
+        c.end_date, 
+        c.status, 
+        c.monthly_rent, 
+        c.deposit_amount,
+        r.id AS room_id,
+        r.title AS room_name, 
+        r.address AS room_address, 
+        r.area, 
+        r.images,
+        r.room_number,
+        l.id AS landlord_id,
+        lu.full_name AS landlord_name,
+        lu.phone AS landlord_phone,
+        lu.email AS landlord_email,
+        t.full_name AS tenant_name,
+        u.phone AS tenant_phone,
+        u.email AS tenant_email,
+        t.id_card_number AS tenant_id_card
+      FROM contracts c
+      JOIN rooms r ON c.room_id = r.id
+      JOIN tenants t ON c.tenant_id = t.id
+      JOIN users u ON t.user_id = u.id
+      JOIN landlords l ON r.landlord_id = l.id
+      JOIN users lu ON l.user_id = lu.id
+      WHERE c.tenant_id = ? 
+      AND c.status IN ('pending', 'active')
+      ORDER BY c.created_at DESC
+      LIMIT 1`,
+      [tenantInfo.id]
+    );
+
+    // Nếu chưa có hợp đồng, trả về thông báo
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Bạn chưa có hợp đồng thuê nào",
+        action: "find_room",
+      });
+    }
+
+    // 3. Lấy dịch vụ
+    const services = await executeQuery(
+      `SELECT 
+        s.id, 
+        s.name, 
+        s.price_unit, 
+        s.price,
+        su.previous_reading,
+        su.current_reading,
+        su.usage_amount,
+        ROUND(s.price * COALESCE(su.usage_amount, 0), 2) as total_amount
+      FROM services s
+      LEFT JOIN service_usage su ON s.id = su.service_id 
+        AND su.contract_id = ?
+        AND su.month = MONTH(CURRENT_DATE())
+        AND su.year = YEAR(CURRENT_DATE())
+      WHERE s.status = true
+      ORDER BY s.name`,
+      [contract.id]
+    );
+
+    // 4. Xử lý hình ảnh phòng
+    let roomImage = "https://via.placeholder.com/400x300";
+    if (contract.images) {
+      try {
+        const images =
+          typeof contract.images === "string"
+            ? JSON.parse(contract.images)
+            : contract.images;
+        if (images && images.length > 0) {
+          roomImage = images[0];
+        }
+      } catch (error) {
+        console.error("Lỗi parse hình ảnh:", error);
+      }
+    }
+
+    // 5. Điều khoản mặc định
+    const terms = [
+      {
+        id: 1,
+        title: "1. Điều khoản chung",
+        content:
+          "Hai bên tự nguyện thỏa thuận và cam kết thực hiện đúng các điều khoản sau đây...",
+      },
+      {
+        id: 2,
+        title: "2. Thời hạn cho thuê",
+        content: `Thời hạn thuê nhà từ ${formatDate(
+          contract.start_date
+        )} đến ${formatDate(
+          contract.end_date
+        )}. Có thể gia hạn nếu hai bên đồng ý.`,
+      },
+    ];
+
+    // 6. Định dạng dữ liệu trả về
+    const formattedContract = {
+      id: `HD${contract.id.toString().padStart(4, "0")}`,
+      status: contract.status,
+      startDate: contract.start_date,
+      endDate: contract.end_date,
+      room: {
+        id: contract.room_id,
+        name: contract.room_name,
+        number: contract.room_number,
+        address: contract.room_address,
+        area: contract.area ? `${contract.area}m²` : "Chưa cập nhật",
+        image: roomImage,
+      },
+      tenant: {
+        id: tenantInfo.tenant_id,
+        name: tenantInfo.full_name,
+        phone: tenantInfo.phone,
+        email: tenantInfo.email,
+      },
+      landlord: {
+        id: contract.landlord_id,
+        name: contract.landlord_name,
+        phone: contract.landlord_phone,
+        email: contract.landlord_email,
+      },
+      payment: {
+        rent: parseFloat(contract.monthly_rent || 0),
+        deposit: parseFloat(contract.deposit_amount || 0),
+        services: services.map((service) => ({
+          id: service.id,
+          name: service.name,
+          price_unit: service.price_unit,
+          price: service.price,
+          previous_reading: service.previous_reading || 0,
+          current_reading: service.current_reading || 0,
+          usage_amount: service.usage_amount || 0,
+          total_amount: parseFloat(service.total_amount || 0),
+        })),
+      },
+      terms: terms,
+      contract_duration: calculateContractDuration(
+        contract.start_date,
+        contract.end_date
+      ),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: formattedContract,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy hợp đồng hiện tại:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi hệ thống khi lấy hợp đồng",
+      error: error.message,
+    });
+  }
+};
+
+// Hàm hỗ trợ tính thời gian hợp đồng
+function calculateContractDuration(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const months =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth());
+  const days = end.getDate() - start.getDate();
+
+  return {
+    months: months,
+    days: days > 0 ? days : 0,
+    formatted: `${months} tháng ${days > 0 ? `${days} ngày` : ""}`,
+  };
+}
+
+// Hàm format ngày
+function formatDate(dateString) {
+  return new Date(dateString).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+// Trong contractController.js
+export const getContractServices = async (req, res) => {
+  try {
+    const contractId = req.params.id;
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+
+    const services = await executeQuery(
+      `SELECT 
+        s.id, 
+        s.name, 
+        s.price_unit, 
+        s.price,
+        su.previous_reading,
+        su.current_reading,
+        su.usage_amount,
+        ROUND(s.price * su.usage_amount, 2) as total_amount
+      FROM services s
+      LEFT JOIN service_usage su ON s.id = su.service_id AND su.contract_id = ? 
+        AND su.month = ? AND su.year = ?
+      WHERE s.status = true
+      ORDER BY s.name`,
+      [contractId, currentMonth, currentYear]
+    );
+
+    res.json({
+      success: true,
+      data: services.map((service) => ({
+        id: service.id,
+        name: service.name,
+        price_unit: service.price_unit,
+        previous_reading: service.previous_reading || 0,
+        current_reading: service.current_reading || 0,
+        usage_amount: service.usage_amount || 0,
+        total_amount: parseFloat(service.total_amount || 0),
+      })),
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy dịch vụ:", error);
+    res.status(500).json({
+      success: false,
+      message: "Không thể lấy danh sách dịch vụ",
       error: error.message,
     });
   }
@@ -294,54 +581,157 @@ LIMIT 12`,
   }
 };
 
-// Tạo hợp đồng mới
+// Cập nhật phần createContract để xử lý đăng ký hợp đồng từ người dùng chưa đăng nhập
 export const createContract = async (req, res) => {
   try {
     const {
       room_id,
-      tenant_id,
-      start_date,
-      end_date,
+      tenant_info,
+      start_date: rawStartDate, // Đổi tên
+      end_date: rawEndDate, // Đổi tên
       deposit_amount,
       monthly_rent,
-      payment_date,
+      payment_date = 5,
       terms_conditions,
     } = req.body;
 
+    // Định dạng lại ngày tháng
+    let formattedStartDate = rawStartDate;
+    if (rawStartDate) {
+      const startDate = new Date(rawStartDate);
+      formattedStartDate = startDate.toISOString().split("T")[0];
+    }
+
+    let formattedEndDate = rawEndDate;
+    if (rawEndDate) {
+      const endDate = new Date(rawEndDate);
+      formattedEndDate = endDate.toISOString().split("T")[0];
+    }
+
     // Kiểm tra các trường bắt buộc
-    if (!room_id || !tenant_id || !start_date || !end_date || !monthly_rent) {
+    if (
+      !room_id ||
+      !tenant_info ||
+      !rawStartDate ||
+      !rawEndDate ||
+      !monthly_rent
+    ) {
       return res.status(400).json({
         success: false,
         message: "Thiếu thông tin bắt buộc",
       });
     }
 
-    const result = await executeQuery(
-      `INSERT INTO contracts (room_id, tenant_id, start_date, end_date, deposit_amount, monthly_rent, payment_date, terms_conditions, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+    // Kiểm tra thông tin tenant
+    const { name, id_card, phone, email, address } = tenant_info;
+    if (!name || !id_card || !phone || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin người thuê",
+      });
+    }
+
+    // Lấy thông tin tenant từ user hiện tại
+    const userId = req.user.id;
+    let tenantId = null;
+
+    // Kiểm tra xem user đã có thông tin tenant chưa
+    const existingTenant = await executeQuery(
+      "SELECT id FROM tenants WHERE user_id = ?",
+      [userId]
+    );
+
+    if (existingTenant.length > 0) {
+      // Nếu đã có, cập nhật thông tin
+      tenantId = existingTenant[0].id;
+      await executeQuery(
+        `UPDATE tenants 
+         SET full_name = ?, id_card_number = ?, phone = ?, permanent_address = ?
+         WHERE id = ?`,
+        [name, id_card, phone, address, tenantId]
+      );
+    } else {
+      // Nếu chưa có, tạo mới tenant
+      const tenantResult = await executeQuery(
+        `INSERT INTO tenants 
+          (user_id, full_name, id_card_number, phone, permanent_address, status)
+          VALUES (?, ?, ?, ?, ?, true)`,
+        [userId, name, id_card, phone, address]
+      );
+      tenantId = tenantResult.insertId;
+    }
+
+    // Cập nhật thông tin user nếu cần
+    await executeQuery(
+      `UPDATE users 
+        SET email = ?, phone = ?, full_name = ?, cccd = ?
+        WHERE id = ?`,
+      [email, phone, name, id_card, userId]
+    );
+
+    // Tạo hợp đồng mới
+    const contractResult = await executeQuery(
+      `INSERT INTO contracts 
+        (room_id, tenant_id, start_date, end_date, deposit_amount, monthly_rent, payment_date, terms_conditions, status, display_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
       [
         room_id,
-        tenant_id,
-        start_date,
-        end_date,
+        tenantId,
+        formattedStartDate,
+        formattedEndDate,
         deposit_amount,
         monthly_rent,
-        payment_date || 5, // Mặc định là ngày 5 hàng tháng
+        payment_date,
         terms_conditions || "Các điều khoản cơ bản của hợp đồng thuê phòng trọ",
+        `HD${room_id.toString().padStart(4, "0")}`,
       ]
     );
 
-    // Cập nhật trạng thái phòng thành 'occupied'
-    await executeQuery("UPDATE rooms SET status = 'occupied' WHERE id = ?", [
-      room_id,
-    ]);
+    const contractId = contractResult.insertId;
 
+    // Tạo mã hợp đồng hiển thị dựa trên room_id
+    const displayCode = `HD${room_id.toString().padStart(4, "0")}`;
+
+    // Debug log để kiểm tra
+    console.log(
+      `Cập nhật display_code = ${displayCode} cho contract_id = ${contractId}`
+    );
+
+    // Cập nhật display_code trong database - thêm log và xử lý lỗi
+    try {
+      console.log(
+        `Cập nhật display_code = ${displayCode} cho contract_id = ${contractId}`
+      );
+      const updateResult = await executeQuery(
+        `UPDATE contracts SET display_code = ? WHERE id = ?`,
+        [displayCode, contractId]
+      );
+      console.log("Kết quả cập nhật display_code:", updateResult);
+    } catch (error) {
+      console.error("Lỗi khi cập nhật display_code:", error);
+    }
+
+    // Tạo thông báo cho người thuê
+    await executeQuery(
+      `INSERT INTO notifications 
+        (user_id, type, title, content, severity, related_id)
+        VALUES (?, 'contract', 'Hợp đồng mới được tạo', ?, 'medium', ?)`,
+      [
+        userId,
+        `Hợp đồng thuê phòng đã được tạo và đang chờ bạn ký kết và đặt cọc.`,
+        contractId,
+      ]
+    );
+
+    // Trả về thông tin hợp đồng
     res.status(201).json({
       success: true,
       message: "Tạo hợp đồng thành công",
       data: {
-        contractId: result.insertId,
-        status: "active",
+        contractId: contractId, // ID thực của hợp đồng để xử lý ở backend
+        roomId: room_id, // ID phòng để tham chiếu
+        displayCode: displayCode, // Mã hiển thị (dựa trên room_id)
+        status: "pending",
       },
     });
   } catch (error) {
@@ -634,3 +1024,109 @@ export const updateTenantInfo = async (req, res) => {
     });
   }
 };
+
+export const createPayment = async (req, res) => {
+  try {
+    const { contract_id, amount, payment_method } = req.body;
+    const userId = req.user.id;
+
+    // 1. Kiểm tra hợp đồng có tồn tại không
+    const [contract] = await executeQuery(
+      "SELECT * FROM contracts WHERE id = ? AND deleted_at IS NULL",
+      [contract_id]
+    );
+
+    if (!contract) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy hợp đồng",
+      });
+    }
+
+    // 2. Tạo hóa đơn mới
+    const invoiceResult = await executeQuery(
+      `INSERT INTO invoices 
+        (contract_id, month, year, room_fee, total_amount, status) 
+        VALUES (?, ?, ?, ?, ?, 'pending')`,
+      [
+        contract_id,
+        new Date().getMonth() + 1,
+        new Date().getFullYear(),
+        amount,
+        amount,
+      ]
+    );
+
+    const invoiceId = invoiceResult.insertId;
+
+    // 3. Tạo thanh toán
+    const transactionId = generateTransactionId(); // Hàm sinh mã giao dịch
+    const paymentResult = await executeQuery(
+      `INSERT INTO payments 
+        (invoice_id, amount, payment_method, payment_date, transaction_id, status) 
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, true)`,
+      [invoiceId, amount, payment_method, transactionId]
+    );
+
+    // 4. Cập nhật trạng thái hóa đơn
+    await executeQuery(`UPDATE invoices SET status = 'paid' WHERE id = ?`, [
+      invoiceId,
+    ]);
+
+    // 5. Cập nhật trạng thái hợp đồng (nếu là thanh toán đặt cọc)
+    if (contract.status === "active") {
+      await executeQuery(
+        `UPDATE contracts SET status = 'active' WHERE id = ?`,
+        [contract_id]
+      );
+    }
+
+    // 6. Tạo thông báo
+    await executeQuery(
+      `INSERT INTO notifications 
+        (user_id, type, title, content, related_id) 
+        VALUES (?, 'payment', 'Thanh toán thành công', ?, ?)`,
+      [
+        userId,
+        `Bạn đã thanh toán ${formatCurrency(
+          amount
+        )} cho hợp đồng ${contract_id}`,
+        paymentResult.insertId,
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Thanh toán thành công",
+      data: {
+        paymentId: paymentResult.insertId,
+        transactionId: transactionId,
+        amount: amount,
+        method: payment_method,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi tạo thanh toán:", error);
+    res.status(500).json({
+      success: false,
+      message: "Không thể xử lý thanh toán",
+      error: error.message,
+    });
+  }
+};
+
+// Hàm sinh mã giao dịch
+function generateTransactionId() {
+  const prefix = "TR";
+  const timestamp = Date.now();
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}${timestamp}${randomPart}`;
+}
+
+// Hàm format tiền tệ
+function formatCurrency(amount) {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount);
+}

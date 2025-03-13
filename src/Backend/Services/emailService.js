@@ -44,7 +44,7 @@ export const sendPasswordResetEmail = async (
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://i.pinimg.com/736x/22/02/7b/22027b8a2b10228783284f13454681aa.jpg" alt="Room Manager Logo" style="max-width: 150px; border-radius: 8px" />
+          <img src="https://i.pinimg.com/736x/4f/8e/27/4f8e270883b3cc72d4c3b1c05113c908.jpg" alt="Room Manager Logo" style="max-width: 150px; border-radius: 8px" />
           </div>
           <h2 style="color: #333; text-align: center;">Đặt lại mật khẩu</h2>
           <p>Xin chào ${username || "Quý khách"},</p>

@@ -178,6 +178,7 @@ export const getRoomById = async (req, res) => {
         r.status, 
         r.description,
         r.facilities, 
+        r.nearby_locations,
         r.images, 
         r.rating,
         r.review_count,
@@ -266,6 +267,47 @@ export const getRoomById = async (req, res) => {
       ...amenitiesList.map((item) => ({ name: item.name, icon: item.icon })),
     ];
 
+    // Xử lý nearby_locations - Đoạn mã đã được sửa
+    console.log("RAW nearby_locations:", roomData.nearby_locations);
+
+    // Đảm bảo định dạng dữ liệu đúng bằng cách parse JSON nếu là string
+    const nearbyLocations = roomData.nearby_locations
+      ? typeof roomData.nearby_locations === "string"
+        ? JSON.parse(roomData.nearby_locations)
+        : roomData.nearby_locations
+      : { nearby: [] };
+
+    console.log("Parsed nearby_locations:", nearbyLocations);
+
+    // Khởi tạo là một đối tượng trống (không phải constant)
+    let formattedNearbyLocations = {};
+
+    // Kiểm tra cấu trúc dữ liệu và xử lý phù hợp
+    if (
+      nearbyLocations &&
+      nearbyLocations.nearby &&
+      Array.isArray(nearbyLocations.nearby)
+    ) {
+      console.log("Processing nearby array:", nearbyLocations.nearby);
+
+      // Xử lý mảng địa điểm gần đó
+      nearbyLocations.nearby.forEach((location, index) => {
+        formattedNearbyLocations[`location_${index}`] = {
+          name: location,
+          distance: "Gần kề",
+          description: location,
+        };
+      });
+    } else if (
+      typeof nearbyLocations === "object" &&
+      nearbyLocations !== null
+    ) {
+      console.log("Processing as object:", nearbyLocations);
+      formattedNearbyLocations = { ...nearbyLocations };
+    }
+
+    console.log("Final formatted nearby locations:", formattedNearbyLocations);
+
     // Lấy thông tin cơ sở lân cận từ JSON
     const nearbyFacilities = {};
     if (facilities.nearby_facilities) {
@@ -292,9 +334,11 @@ export const getRoomById = async (req, res) => {
         available_rooms: roomData.available_rooms || 0,
         current_views: roomData.current_views || 0,
         is_favorite: roomData.is_favorite || false,
+        nearby_locations: nearbyLocations, // Giữ nguyên dữ liệu gốc để sử dụng trong component
         location: {
           address: roomData.address,
           nearby_facilities: nearbyFacilities,
+          nearby_locations: formattedNearbyLocations, // Thêm dữ liệu đã định dạng
         },
         details: {
           area: roomData.area,
@@ -342,9 +386,11 @@ export const getRoomById = async (req, res) => {
         available_rooms: 0,
         current_views: 0,
         is_favorite: false,
+        nearby_locations: { nearby: [] },
         location: {
           address: "Không có địa chỉ",
           nearby_facilities: {},
+          nearby_locations: {},
         },
         details: {
           area: 0,

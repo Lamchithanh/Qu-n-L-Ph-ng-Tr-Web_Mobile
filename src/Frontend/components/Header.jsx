@@ -110,7 +110,7 @@ const Header = () => {
   const getMenuItems = () => {
     const commonItems = [
       {
-        to: "/RentalContract",
+        to: "/SignedContractPage",
         label: "Hợp đồng thuê",
       },
       {

@@ -68,9 +68,7 @@ const HomePage = () => {
           id: room.id,
           title: room.title || "Phòng chưa có tên",
           address: room.address || "Địa chỉ chưa cập nhật",
-          price: room.price
-            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
-            : "Chưa cập nhật",
+          price: room.price ? parseFloat(room.price) * 1000000 : null,
           area: room.area || "Chưa có",
           images: Array.isArray(room.images)
             ? room.images[0] || DefaultRoomImage
@@ -120,9 +118,7 @@ const HomePage = () => {
           id: room.id,
           title: room.title || "Phòng chưa có tên",
           address: room.address || "Địa chỉ chưa cập nhật",
-          price: room.price
-            ? new Intl.NumberFormat("vi-VN").format(parseFloat(room.price))
-            : "Chưa cập nhật",
+          price: room.price ? parseFloat(room.price) * 1000000 : null,
           area: room.area || "Chưa có",
           images: Array.isArray(room.images)
             ? room.images[0] || DefaultRoomImage

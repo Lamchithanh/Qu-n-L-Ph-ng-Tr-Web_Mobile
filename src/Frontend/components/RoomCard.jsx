@@ -55,19 +55,16 @@ const RoomCard = ({ room, onDetailClick }) => {
   const formatPrice = (price) => {
     if (!price) return "Giá chưa cập nhật";
 
-    // Nếu giá đã là chuỗi được định dạng
+    // Chuyển đổi price thành số nguyên để loại bỏ phần thập phân
+    let numericPrice = price;
     if (typeof price === "string") {
-      // Kiểm tra xem đã có dấu phân cách hàng nghìn chưa
-      if (price.includes(".") || price.includes(",")) {
-        return `${price} đ/tháng`;
-      }
-
-      // Nếu là chuỗi nhưng chưa được định dạng
-      return `${parseFloat(price).toLocaleString("vi-VN")} đ/tháng`;
+      numericPrice = parseInt(price);
+    } else {
+      numericPrice = parseInt(price);
     }
 
-    // Nếu giá là số
-    return `${price.toLocaleString("vi-VN")} đ/tháng`;
+    // Định dạng với dấu phẩy ngăn cách hàng nghìn
+    return `${numericPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} đ`;
   };
 
   // Lấy loại phòng dựa trên diện tích

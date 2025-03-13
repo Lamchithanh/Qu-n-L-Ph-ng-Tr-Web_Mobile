@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
 import defaultAvatar from "../../Assets/cabipara.jpg";
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -81,6 +82,10 @@ const ProfilePage = () => {
         console.log(
           "ID card from tenant_info:",
           profileData.tenant_info?.id_card_number
+        );
+        console.log(
+          "Tenant info from profile:",
+          JSON.stringify(profileData.tenant_info, null, 2)
         );
 
         // Cập nhật state với dữ liệu từ API, ưu tiên lấy cccd từ user trước
@@ -206,6 +211,7 @@ const ProfilePage = () => {
       email: userData.email,
       phone: userData.phone,
       idCard: userData.idCard,
+      address: userData.address, // Địa chỉ thường trú (permanent_address)
       // Các trường khác nếu cần
     });
   };
@@ -221,15 +227,12 @@ const ProfilePage = () => {
         return;
       }
 
-      // Debug: Log dữ liệu trước khi gửi
-      console.log("tempData:", tempData);
-      console.log("userData:", userData);
-
       // Chuẩn bị dữ liệu cần cập nhật
       const updateData = {
         full_name: tempData.fullName,
         phone: tempData.phone,
         cccd: tempData.idCard,
+        address: tempData.address, // Địa chỉ thường trú
       };
 
       // Debug: Log dữ liệu trước khi gửi
@@ -237,7 +240,7 @@ const ProfilePage = () => {
 
       // Gọi API cập nhật
       const response = await axios.put(
-        `${CONFIG.API_URL}/users/profile-updateUser`, // Sửa endpoint tại đây
+        `${CONFIG.API_URL}/users/profile-updateUser`,
         updateData,
         {
           headers: {
@@ -247,35 +250,26 @@ const ProfilePage = () => {
         }
       );
 
-      // Debug: Log response chi tiết
-      console.log(
-        "API Response full detail:",
-        JSON.stringify(response.data, null, 2)
-      );
-      console.log(
-        "User from response:",
-        JSON.stringify(response.data.user, null, 2)
-      );
-      console.log("CCCD value in response:", response.data.user?.cccd);
+      // Debug: Log response để kiểm tra
+      console.log("API response:", response.data);
 
-      // Cập nhật state với dữ liệu mới
+      // Trong hàm handleSave
       if (response.data.user) {
+        // Kiểm tra xem address có nằm trong updatedFields không
+        const addressUpdated = response.data.updatedFields?.includes("address");
+
         const newUserData = {
           ...userData,
           fullName: response.data.user.full_name || userData.fullName,
           phone: response.data.user.phone || userData.phone,
           idCard: response.data.user.cccd || userData.idCard,
+          // Sử dụng giá trị từ tempData nếu đã cập nhật address
+          address: addressUpdated ? tempData.address : userData.address,
         };
 
-        console.log("Previous userData:", JSON.stringify(userData, null, 2));
-        console.log(
-          "New userData to be set:",
-          JSON.stringify(newUserData, null, 2)
-        );
-
+        console.log("Setting new user data:", newUserData);
         setUserData(newUserData);
       }
-
       // Hiển thị thông báo thành công
       showToast("Cập nhật thông tin thành công", "success");
 
@@ -299,6 +293,54 @@ const ProfilePage = () => {
         showToast("Lỗi kết nối. Vui lòng thử lại.", "error");
       }
     }
+  };
+
+  const handleAvatarUpload = async (event) => {
+    // Thêm input file ẩn để kích hoạt chọn ảnh
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Lấy token từ localStorage
+      const token = localStorage.getItem("userToken");
+      if (!token) {
+        showToast("Phiên đăng nhập đã hết hạn", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      try {
+        const response = await axios.post(
+          `${CONFIG.API_URL}/users/upload-avatar`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Cập nhật state hoặc UI với avatar mới
+        setUserData((prev) => ({
+          ...prev,
+          avatar: response.data.avatar,
+        }));
+
+        showToast("Cập nhật avatar thành công", "success");
+      } catch (error) {
+        console.error("Lỗi upload avatar:", error);
+        showToast("Lỗi upload avatar", "error");
+      }
+    };
+
+    // Kích hoạt chọn file
+    fileInput.click();
   };
 
   const handleChange = (e) => {
@@ -426,7 +468,12 @@ const ProfilePage = () => {
               alt="Ảnh đại diện"
               className={styles.avatar}
             />
-            <button className={styles.changePhotoButton}>Đổi ảnh</button>
+            <button
+              className={styles.changePhotoButton}
+              onClick={handleAvatarUpload}
+            >
+              Đổi ảnh
+            </button>
           </div>
 
           <div className={styles.userInfo}>
@@ -575,8 +622,20 @@ const ProfilePage = () => {
             <div className={styles.fieldGroup}>
               <MapPin className={styles.fieldIcon} />
               <div className={styles.fieldContent}>
-                <label className={styles.fieldLabel}>Địa chỉ</label>
-                <div className={styles.fieldValue}>{userData.address}</div>
+                <label className={styles.fieldLabel}>Địa chỉ thường trú</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="address"
+                    value={tempData.address}
+                    onChange={handleChange}
+                    className={styles.fieldInput}
+                    placeholder="Địa chỉ thường trú trên CCCD"
+                    maxLength={255}
+                  />
+                ) : (
+                  <div className={styles.fieldValue}>{userData.address}</div>
+                )}
               </div>
             </div>
 

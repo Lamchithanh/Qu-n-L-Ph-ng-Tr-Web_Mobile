@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   createUser,
   loginUser,
@@ -13,20 +12,16 @@ import {
   verifyResetCode,
   resetPassword,
   resendResetCode,
-  // Import new controllers
   getNotifications,
   getMaintenanceRequests,
   createMaintenanceRequest,
+  updateAvatar,
 } from "../Controllers/userController.js";
 import { authenticateToken } from "../Middleware/Middleware.js";
+import uploadMaintenance from "../Middleware/uploadMaintenanceMiddleware.js"; // Tạo middleware riêng cho maintenance
+import uploadAvatar from "../Middleware/uploadMiddleware.js"; // Sử dụng middleware upload avatar
 
 const router = express.Router();
-
-// Cấu hình upload file cho maintenance requests
-const upload = multer({
-  dest: "uploads/maintenance/",
-  limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB
-});
 
 // Routes không cần xác thực
 router.post("/check-user", checkUser);
@@ -48,26 +43,39 @@ router.delete("/:id", authenticateToken, deleteUser);
 
 // Routes cho notifications và maintenance requests
 router.get("/notifications", authenticateToken, getNotifications);
-// Thêm vào đầu file userRoutes.js
-router.get(
-  "/maintenance-requests",
-  (req, res, next) => {
-    console.log("GET /maintenance-requests được gọi");
-    next();
-  },
-  authenticateToken,
-  getMaintenanceRequests
-);
+
+router.get("/maintenance-requests", authenticateToken, getMaintenanceRequests);
 
 router.post(
   "/maintenance-requests",
-  (req, res, next) => {
-    console.log("POST /maintenance-requests được gọi");
-    next();
-  },
   authenticateToken,
-  upload.array("images", 5),
+  uploadMaintenance.array("images", 5), // Sử dụng middleware upload riêng
   createMaintenanceRequest
+);
+
+router.post(
+  "/upload-avatar",
+  authenticateToken,
+  uploadAvatar.single("avatar"), // Sử dụng middleware upload avatar
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Không có file được tải lên" });
+      }
+
+      // Tạo URL avatar tương đối
+      const avatarUrl = `/uploads/avatar/${req.file.filename}`;
+
+      // Gọi hàm cập nhật avatar từ controller
+      await updateAvatar(req, res, avatarUrl);
+    } catch (error) {
+      console.error("Lỗi upload avatar:", error);
+      res.status(500).json({
+        message: "Lỗi tải lên avatar",
+        error: error.message,
+      });
+    }
+  }
 );
 
 export default router;

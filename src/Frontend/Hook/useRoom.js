@@ -31,7 +31,7 @@ export const useRoom = (roomId) => {
   const toggleFavorite = async () => {
     try {
       // Kiểm tra đăng nhập
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("userToken");
       if (!token) {
         // Chuyển hướng tới trang đăng nhập hoặc hiển thị thông báo
         return false;

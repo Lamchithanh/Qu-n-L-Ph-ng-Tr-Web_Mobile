@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useRoom } from "../Hook/useRoom.js";
 import {
@@ -19,6 +19,10 @@ import {
   Home,
   Users,
   ArrowRight,
+  School,
+  Coffee,
+  ShoppingBag,
+  Utensils,
 } from "lucide-react";
 import styles from "../../Style/RoomDetail.module.scss";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +39,70 @@ const RoomDetail = () => {
     recent_reviews: [],
   };
 
+  useEffect(() => {
+    console.log("ROOM FULL DATA:", room);
+    if (room) {
+      console.log("Location:", room.location);
+      console.log("Nearby Facilities:", room.location?.nearby_facilities);
+    }
+  }, [room]);
+
+  // Phần hiển thị thông tin vị trí
+  const LocationHighlights = ({ room }) => {
+    const [nearbyLocations, setNearbyLocations] = useState([]);
+
+    useEffect(() => {
+      // Xử lý dữ liệu nearby_locations khi component được render hoặc dữ liệu thay đổi
+      if (room && room.nearby_locations && room.nearby_locations.nearby) {
+        if (Array.isArray(room.nearby_locations.nearby)) {
+          setNearbyLocations(room.nearby_locations.nearby);
+        }
+      } else if (room && room.location && room.location.nearby_locations) {
+        // Thử từ location.nearby_locations nếu nearby_locations không có sẵn
+        const locations = [];
+        // Chuyển đổi object thành mảng để hiển thị
+        for (const key in room.location.nearby_locations) {
+          if (room.location.nearby_locations.hasOwnProperty(key)) {
+            const item = room.location.nearby_locations[key];
+            locations.push(item.name || item.description);
+          }
+        }
+        setNearbyLocations(locations);
+      }
+    }, [room]);
+
+    return (
+      <div className={styles.locationHighlights}>
+        <h2 className={styles.cardTitle}>Vị trí đắc địa</h2>
+        <div className={styles.highlights}>
+          {room?.location?.address && (
+            <div className={styles.highlight}>
+              <MapPin size={20} />
+              <div>
+                <h4>Địa chỉ</h4>
+                <p>{room.location.address}</p>
+              </div>
+            </div>
+          )}
+
+          {nearbyLocations.length > 0 ? (
+            nearbyLocations.map((location, index) => (
+              <div key={`loc-${index}`} className={styles.highlight}>
+                <MapPin size={20} />
+                <div>
+                  <h4>Gần kề</h4>
+                  <p>{location}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>Không có thông tin về các địa điểm lân cận</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!room) return <div>Không tìm thấy thông tin phòng</div>;
@@ -45,6 +113,13 @@ const RoomDetail = () => {
 
   const gotobillpayment = () => {
     navigate(`/RentalContract/${roomId}`);
+  };
+
+  // Tính số tiền đặt cọc (x2 giá phòng gốc)
+  const calculateDeposit = () => {
+    if (!room?.pricing?.original_price) return "N/A";
+    const deposit = parseInt(room.pricing.original_price) * 2;
+    return deposit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   return (
@@ -129,7 +204,6 @@ const RoomDetail = () => {
               </div>
             </div>
           </div>
-
           {/* Amenities */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Tiện nghi</h2>
@@ -144,7 +218,7 @@ const RoomDetail = () => {
                     </div>
                   ))
               ) : (
-                <p>Không có thông tin tiện nghi</p>
+                <p>Phòng chưa cập nhật thông tin tiện nghi</p>
               )}
             </div>
             {room?.amenities?.length > 6 && (
@@ -156,7 +230,6 @@ const RoomDetail = () => {
               </button>
             )}
           </div>
-
           {/* Reviews */}
           <div className={`${styles.card} ${styles.reviews}`}>
             <h2 className={styles.cardTitle}>Đánh giá</h2>
@@ -164,7 +237,7 @@ const RoomDetail = () => {
               <div className={styles.summary}>
                 <p>
                   Đánh giá trung bình:{" "}
-                  {room?.rating?.average ?? "Chưa có đánh giá"}/5
+                  {room?.ratings?.average ?? "Chưa có đánh giá"}/5
                 </p>
 
                 <div className={styles.stars}>
@@ -176,56 +249,50 @@ const RoomDetail = () => {
               </div>
             </div>
           </div>
-
           {/* Recent Reviews */}
           <div className={styles.socialProof}>
             <h3>Đánh giá từ cư dân</h3>
             <div className={styles.reviewList}>
-              {roomRatings.recent_reviews.map((review, index) => (
-                <div key={index} className={styles.reviewCard}>
-                  <div className={styles.reviewHeader}>
-                    <img
-                      src={review.reviewer_avatar}
-                      alt={review.reviewer_name}
-                    />
-                    <div>
-                      <h4>{review.reviewer_name}</h4>
-                      <div className={styles.stars}>
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={16} />
-                        ))}
+              {roomRatings.recent_reviews &&
+              roomRatings.recent_reviews.length > 0 ? (
+                roomRatings.recent_reviews.map((review, index) => (
+                  <div key={index} className={styles.reviewCard}>
+                    <div className={styles.reviewHeader}>
+                      <img
+                        src={review.reviewer_avatar}
+                        alt={review.reviewer_name}
+                      />
+                      <div>
+                        <h4>{review.reviewer_name}</h4>
+                        <div className={styles.stars}>
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              size={16}
+                              fill={
+                                i < Math.floor(review.rating)
+                                  ? "currentColor"
+                                  : "none"
+                              }
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
+                    <p>{review.review}</p>
                   </div>
-                  <p>{review.review}</p>
+                ))
+              ) : (
+                <div className={styles.noReviews}>
+                  <p>Chưa có đánh giá nào cho phòng này.</p>
+                  <p>Hãy là người đầu tiên đánh giá sau khi thuê!</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
           {/* Location Highlights */}
-          <div className={styles.locationHighlights}>
-            <h2 className={styles.cardTitle}>Vị trí đắc địa</h2>
-            <div className={styles.highlights}>
-              {room?.location?.nearby_facilities ? (
-                Object.entries(room.location.nearby_facilities).map(
-                  ([key, value], index) => (
-                    <div key={index} className={styles.highlight}>
-                      {key === "shopping_mall" && <Clock size={20} />}
-                      {key === "bus_station" && <Train size={20} />}
-                      {key === "office_area" && <Building size={20} />}
-                      <div>
-                        <h4>{value.distance}</h4>
-                        <p>{value.description}</p>
-                      </div>
-                    </div>
-                  )
-                )
-              ) : (
-                <p>Không có thông tin về cơ sở gần đây</p>
-              )}
-            </div>
-          </div>
+          <LocationHighlights room={room} />
         </div>
 
         {/* Booking Card */}
@@ -244,17 +311,30 @@ const RoomDetail = () => {
             {room.pricing ? (
               <>
                 <div className={styles.oldPrice}>
-                  {room.pricing.original_price?.toLocaleString() ?? "N/A"} đ
+                  {room.pricing.original_price
+                    ? parseInt(room.pricing.original_price)
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    : "N/A"}{" "}
+                  đ
                 </div>
                 <p className={styles.price}>
-                  {room.pricing.current_price?.toLocaleString() ?? "N/A"} đ
+                  {room.pricing.current_price
+                    ? parseInt(room.pricing.current_price)
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    : "N/A"}{" "}
+                  đ
                 </p>
                 <span className={styles.saveTag}>
                   Tiết kiệm{" "}
                   {room.pricing.original_price && room.pricing.current_price
                     ? (
-                        room.pricing.original_price - room.pricing.current_price
-                      ).toLocaleString()
+                        parseInt(room.pricing.original_price) -
+                        parseInt(room.pricing.current_price)
+                      )
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                     : "N/A"}{" "}
                   đ
                 </span>
@@ -284,7 +364,7 @@ const RoomDetail = () => {
           <button className={styles.bookButton} onClick={gotobillpayment}>
             <div>
               <strong>Đặt phòng ngay</strong>
-              <p>Chỉ cần đặt cọc 10tr - Dọn vào ở ngay!</p>
+              <p>Chỉ cần đặt cọc {calculateDeposit()} đ - Dọn vào ở ngay!</p>
             </div>
           </button>
         </div>

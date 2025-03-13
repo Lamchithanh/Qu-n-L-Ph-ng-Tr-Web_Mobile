@@ -341,6 +341,12 @@ export const registerFromContract = async (req, res) => {
       { expiresIn: "24h" }
     );
 
+    res.status(201).json({
+      message: "Đăng ký thành công",
+      userId: result.insertId,
+      token, // Quan trọng: trả về token
+    });
+
     // Tạo user_profile
     await executeQuery(
       `INSERT INTO user_profiles 
@@ -348,12 +354,6 @@ export const registerFromContract = async (req, res) => {
         VALUES (?, NULL, NULL, NOW())`,
       [result.insertId]
     );
-
-    res.status(201).json({
-      message: "Đăng ký thành công",
-      userId: result.insertId,
-      token,
-    });
   } catch (error) {
     res.status(500).json({
       message: "Lỗi đăng ký",
@@ -417,9 +417,17 @@ export const updateUser = async (req, res) => {
   try {
     // Lấy ID từ token
     const userId = req.user.id;
-    const { phone, full_name, avatar, cccd } = req.body;
+    const { phone, full_name, avatar, cccd, address } = req.body;
 
-    // Tạo một đối tượng để lưu các trường hợp lệ
+    console.log("Received update data:", {
+      phone,
+      full_name,
+      avatar,
+      cccd,
+      address,
+    });
+
+    // Tạo một đối tượng để lưu các trường hợp lệ cho bảng users
     const updateFields = {};
     const updateValues = [];
 
@@ -460,11 +468,6 @@ export const updateUser = async (req, res) => {
         [cccd, userId]
       );
       console.log("CCCD value received:", cccd);
-      // Thêm log SQL để kiểm tra truy vấn update
-      console.log("Update query:", `UPDATE users SET cccd = ? WHERE id = ?`, [
-        cccd,
-        userId,
-      ]);
 
       if (existingCccd.length > 0) {
         return res.status(400).json({
@@ -487,46 +490,93 @@ export const updateUser = async (req, res) => {
       updateValues.push(avatar);
     }
 
-    // Nếu không có trường nào để update
-    if (updateValues.length === 0) {
+    // Nếu không có trường nào để update trong users và không có address để update
+    if (Object.keys(updateFields).length === 0 && address === undefined) {
       return res.status(400).json({
         message: "Không có thông tin nào để cập nhật",
       });
     }
 
-    // Tạo câu query động
-    const setClause = Object.keys(updateFields)
-      .map((field) => `${field} = ?`)
-      .join(", ");
+    // Thực hiện các cập nhật trong users table nếu có
+    if (Object.keys(updateFields).length > 0) {
+      // Tạo câu query động
+      const setClause = Object.keys(updateFields)
+        .map((field) => `${field} = ?`)
+        .join(", ");
 
-    // Thêm userId vào cuối mảng values
-    updateValues.push(userId);
+      // Thêm userId vào cuối mảng values
+      updateValues.push(userId);
 
-    // Thực hiện update
-    const result = await executeQuery(
-      `UPDATE users 
-       SET ${setClause}, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = ? AND deleted_at IS NULL`,
-      updateValues
-    );
+      // Thực hiện update
+      const result = await executeQuery(
+        `UPDATE users 
+         SET ${setClause}, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ? AND deleted_at IS NULL`,
+        updateValues
+      );
 
-    // Kiểm tra xem có bản ghi nào được cập nhật không
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "Không tìm thấy người dùng hoặc người dùng đã bị xóa",
-      });
+      // Kiểm tra xem có bản ghi nào được cập nhật không
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          message: "Không tìm thấy người dùng hoặc người dùng đã bị xóa",
+        });
+      }
+
+      console.log(`Updated ${result.affectedRows} user records successfully.`);
     }
 
-    // Lấy thông tin người dùng sau khi cập nhật
-    const [updatedUser] = await executeQuery(
-      `SELECT id, username, email, phone, full_name, cccd, avatar, role 
-       FROM users 
-       WHERE id = ?`,
+    // Kiểm tra xem tenant record đã tồn tại chưa
+    const tenantExists = await executeQuery(
+      "SELECT id FROM tenants WHERE user_id = ?",
       [userId]
     );
 
-    // Cập nhật thông tin trong bảng tenants nếu có thay đổi về full_name hoặc cccd
-    if (full_name !== undefined || cccd !== undefined) {
+    console.log("Tenant exists check:", tenantExists);
+
+    // Xử lý cập nhật thông tin tenant
+    let tenantUpdateSuccess = false;
+
+    if (tenantExists.length === 0) {
+      // Nếu tenant record chưa tồn tại, tạo mới
+      if (
+        full_name !== undefined ||
+        cccd !== undefined ||
+        address !== undefined
+      ) {
+        const insertFields = [];
+        const insertValues = [];
+
+        insertFields.push("user_id");
+        insertValues.push(userId);
+
+        if (full_name !== undefined) {
+          insertFields.push("full_name");
+          insertValues.push(full_name);
+        }
+
+        if (cccd !== undefined) {
+          insertFields.push("id_card_number");
+          insertValues.push(cccd);
+        }
+
+        if (address !== undefined) {
+          insertFields.push("permanent_address");
+          insertValues.push(address);
+          console.log("Adding address to new tenant record:", address);
+        }
+
+        const insertResult = await executeQuery(
+          `INSERT INTO tenants (${insertFields.join(
+            ", "
+          )}) VALUES (${insertFields.map(() => "?").join(", ")})`,
+          insertValues
+        );
+
+        console.log("Tenant insert result:", insertResult);
+        tenantUpdateSuccess = insertResult.affectedRows > 0;
+      }
+    } else {
+      // Tenant record đã tồn tại, cập nhật
       const tenantUpdateFields = [];
       const tenantUpdateValues = [];
 
@@ -540,26 +590,95 @@ export const updateUser = async (req, res) => {
         tenantUpdateValues.push(cccd);
       }
 
+      if (address !== undefined) {
+        const updateQuery = `UPDATE tenants 
+          SET permanent_address = ?, 
+          updated_at = CURRENT_TIMESTAMP 
+          WHERE user_id = ?`;
+
+        const updateResult = await executeQuery(updateQuery, [address, userId]);
+
+        console.log("Address update result:", {
+          affectedRows: updateResult.affectedRows,
+          changedRows: updateResult.changedRows,
+          message: updateResult.message,
+        });
+
+        // Thêm kiểm tra kết quả update
+        if (updateResult.affectedRows === 0) {
+          console.warn("Failed to update address. Attempting to insert...");
+
+          // Nếu update không thành công, thử insert mới
+          await executeQuery(
+            `INSERT INTO tenants (user_id, permanent_address, created_at) 
+             VALUES (?, ?, CURRENT_TIMESTAMP)`,
+            [userId, address]
+          );
+        }
+      }
+
       if (tenantUpdateFields.length > 0) {
         // Thêm userId vào cuối mảng values
         tenantUpdateValues.push(userId);
 
-        await executeQuery(
+        // Log truy vấn để debug
+        console.log(
+          "Tenant update query:",
+          `UPDATE tenants SET ${tenantUpdateFields.join(
+            ", "
+          )}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
+          tenantUpdateValues
+        );
+
+        // Thực hiện update
+        const tenantResult = await executeQuery(
           `UPDATE tenants 
            SET ${tenantUpdateFields.join(", ")}, updated_at = CURRENT_TIMESTAMP 
            WHERE user_id = ?`,
           tenantUpdateValues
         );
+
+        console.log("Tenant update result:", tenantResult);
+
+        // Kiểm tra kết quả cập nhật
+        if (tenantResult.affectedRows === 0) {
+          console.warn("No tenant records were updated!");
+        } else {
+          console.log(
+            `Updated ${tenantResult.affectedRows} tenant records successfully.`
+          );
+          tenantUpdateSuccess = true;
+        }
       }
     }
 
+    // Kiểm tra trực tiếp sau khi cập nhật
+    const verifyUpdate = await executeQuery(
+      "SELECT permanent_address FROM tenants WHERE user_id = ?",
+      [userId]
+    );
+    console.log("Verification after update:", verifyUpdate);
+
+    // Lấy thông tin người dùng đầy đủ sau khi cập nhật
+    const [updatedUser] = await executeQuery(
+      `SELECT u.id, u.username, u.email, u.phone, u.full_name, u.cccd, u.avatar, u.role, t.permanent_address
+       FROM users u
+       LEFT JOIN tenants t ON u.id = t.user_id
+       WHERE u.id = ?`,
+      [userId]
+    );
+
     // Log thông tin user đã cập nhật để debug
-    console.log("Updated user:", updatedUser);
+    console.log("Updated user with address:", updatedUser);
 
     res.json({
       message: "Cập nhật người dùng thành công",
       user: updatedUser,
-      updatedFields: Object.keys(updateFields),
+      updatedFields: [
+        ...Object.keys(updateFields),
+        ...(address !== undefined ? ["address"] : []),
+      ],
+      tenant_update_success: tenantUpdateSuccess,
     });
   } catch (error) {
     console.error("Lỗi cập nhật người dùng:", error);
@@ -570,27 +689,45 @@ export const updateUser = async (req, res) => {
   }
 };
 
-export const updateAvatar = async (req, res) => {
+export const updateAvatar = async (req, res, avatarUrl) => {
   try {
     const userId = req.user.id;
-    const { avatar } = req.body;
 
-    if (!avatar) {
-      return res
-        .status(400)
-        .json({ message: "Vui lòng cung cấp đường dẫn avatar" });
+    if (!avatarUrl) {
+      return res.status(400).json({
+        message: "Không có file avatar",
+      });
     }
 
+    // Lấy avatar cũ
+    const [currentUser] = await executeQuery(
+      "SELECT avatar FROM users WHERE id = ? AND deleted_at IS NULL",
+      [userId]
+    );
+
+    // Cập nhật avatar mới
     await executeQuery(
       "UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
-      [avatar, userId]
+      [avatarUrl, userId]
     );
+
+    // Xóa file avatar cũ nếu tồn tại
+    if (
+      currentUser.avatar &&
+      currentUser.avatar.startsWith("/uploads/avatar/")
+    ) {
+      const oldAvatarPath = path.join(process.cwd(), currentUser.avatar);
+      if (fs.existsSync(oldAvatarPath)) {
+        fs.unlinkSync(oldAvatarPath);
+      }
+    }
 
     res.json({
       message: "Cập nhật avatar thành công",
-      avatar: avatar,
+      avatar: avatarUrl,
     });
   } catch (error) {
+    console.error("Lỗi cập nhật avatar:", error);
     res.status(500).json({
       message: "Lỗi cập nhật avatar",
       error: error.message,

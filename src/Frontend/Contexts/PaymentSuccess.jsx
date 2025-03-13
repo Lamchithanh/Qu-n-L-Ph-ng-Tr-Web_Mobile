@@ -1,31 +1,86 @@
-// PaymentSuccess.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { CheckCircle, Download, Home } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { generateReceipt } from "../../Utils/generateReceipt";
 import styles from "../../Style/PaymentSuccess.module.scss";
+import { CONFIG } from "../config/config";
+import ReceiptModal from "./ReceiptModal";
 
 const PaymentSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const { contractId, amount, method } = location.state || {};
 
-  const confirmationCode = `${contractId}-${Math.random()
+  const [receiptData, setReceiptData] = useState({
+    contractId: contractId
+      ? String(contractId).startsWith("HD")
+        ? String(contractId)
+        : `HD${String(contractId).padStart(4, "0")}`
+      : "HDXXXX",
+    confirmationCode: `${
+      contractId
+        ? String(contractId).startsWith("HD")
+          ? String(contractId)
+          : `HD${String(contractId).padStart(4, "0")}`
+        : "HDXXXX"
+    }-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+    amount: amount || 0,
+    method: method || "Chuyển khoản",
+    tenantName: "",
+    tenantEmail: "",
+  });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        const response = await fetch(`${CONFIG.API_URL}/users/profile`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+        if (result) {
+          setUserProfile(result);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy thông tin người dùng:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  // Format mã hợp đồng theo cùng định dạng với các thành phần khác
+  const displayContractId = contractId
+    ? String(contractId).startsWith("HD")
+      ? String(contractId)
+      : `HD${String(contractId).padStart(4, "0")}`
+    : "HDXXXX";
+
+  const confirmationCode = `${displayContractId}-${Math.random()
     .toString(36)
     .substr(2, 6)
     .toUpperCase()}`;
 
   const handleDownload = async () => {
     try {
-      await generateReceipt({
-        contractId,
+      const receiptData = {
+        contractId: displayContractId,
         confirmationCode,
         amount,
-        method: method || "Chuyển khoản", // Thêm giá trị mặc định nếu method không tồn tại
-      });
+        method: method || "Chuyển khoản",
+        tenantName: userProfile?.full_name,
+        tenantEmail: userProfile?.email,
+        tenantPhone: userProfile?.phone,
+      };
 
-      // Thông báo tải thành công
-      alert("Đã tải biên nhận thành công!");
+      await generateReceipt(receiptData);
     } catch (error) {
       console.error("Lỗi tải biên nhận:", error);
       alert(`Lỗi: ${error.message || "Không thể tải biên nhận"}`);
@@ -48,7 +103,7 @@ const PaymentSuccess = () => {
         <div className={styles.details}>
           <div className={styles.detailItem}>
             <span>Mã hợp đồng:</span>
-            <strong>{contractId}</strong>
+            <strong>{displayContractId}</strong>
           </div>
           <div className={styles.detailItem}>
             <span>Mã xác nhận:</span>
@@ -90,6 +145,13 @@ const PaymentSuccess = () => {
           </button>
         </div>
       </div>
+
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        receiptData={receiptData}
+        onDownload={handleDownload}
+      />
     </div>
   );
 };
