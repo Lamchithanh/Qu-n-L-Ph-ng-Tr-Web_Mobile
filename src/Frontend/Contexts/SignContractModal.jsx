@@ -12,7 +12,7 @@ import {
 import styles from "../../Style/SignContractModal.module.scss";
 import { CONFIG } from "../config/config";
 import ContractTerms from "../components/ContractTerms";
-import { useToast } from "./ToastContext";
+import { useToast } from "../Contexts/ToastContext";
 
 const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
   const { showToast } = useToast();
@@ -29,41 +29,28 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     signing: false,
     success: false,
     error: null,
-    contractId: null, // Thêm ID hợp đồng nếu ký thành công
+    contractId: null,
+    display_code: null,
   });
 
-  const formatContractCode = (id, prefix = "HD") => {
-    return `${prefix}${String(id).padStart(4, "0")}`;
+  // Hàm format ngày tháng
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
-  useEffect(() => {
-    // Kiểm tra đăng nhập khi component được tải
-    const token = localStorage.getItem("userToken");
-    setIsLoggedIn(!!token);
+  // Hàm format tiền tệ
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
 
-    if (!contractInfo?.tenant?.email) {
-      setError("Thông tin hợp đồng không hợp lệ");
-      setIsChecking(false);
-      return;
-    }
-    checkUserExists();
-  }, [contractInfo]);
-
-  // Thêm dòng này trước khi gửi request
-  console.log("Request body:", {
-    room_id: contractInfo.room.id,
-    tenant_info: {
-      name: contractInfo.tenant.name,
-      id_card: contractInfo.tenant.id,
-      phone: contractInfo.tenant.phone,
-      email: contractInfo.tenant.email,
-    },
-    start_date: contractInfo.startDate,
-    end_date: contractInfo.endDate,
-    deposit_amount: contractInfo.payment.deposit,
-    monthly_rent: contractInfo.payment.rent,
-  });
-
+  // Kiểm tra tồn tại của người dùng
   const checkUserExists = async () => {
     try {
       const response = await fetch(`${CONFIG.API_URL}/users/check-user`, {
@@ -85,108 +72,199 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     }
   };
 
+  // Kiểm tra trạng thái đăng nhập và người dùng
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    setIsLoggedIn(!!token);
+
+    if (!contractInfo?.tenant?.email) {
+      setError("Thông tin hợp đồng không hợp lệ");
+      setIsChecking(false);
+      return;
+    }
+    checkUserExists();
+  }, [contractInfo]);
+
+  // Xử lý ký hợp đồng
   const performContractSigning = async () => {
     try {
-      // 1. Kiểm tra token
-      const token = localStorage.getItem("userToken");
-      if (!token) {
-        showToast("Vui lòng đăng nhập để ký hợp đồng", "error");
-        return;
-      }
-
-      // 2. Kiểm tra và validate thông tin người thuê
-      const tenantInfo = {
-        name: contractInfo.tenant.name || "",
-        id_card: contractInfo.tenant.id || contractInfo.tenant.id_card || "",
-        phone: contractInfo.tenant.phone || "",
-        email: contractInfo.tenant.email || "",
-        address: contractInfo.room.address || "",
-      };
-
-      // 3. Kiểm tra các trường bắt buộc
-      const requiredFields = ["name", "id_card", "phone", "email"];
-      const missingFields = requiredFields.filter(
-        (field) => !tenantInfo[field]
-      );
-
-      if (missingFields.length > 0) {
-        showToast(`Vui lòng điền đầy đủ: ${missingFields.join(", ")}`, "error");
-        return;
-      }
-
-      // 4. Chuẩn bị payload
-      const today = new Date();
-      const endDate = new Date(today);
-      endDate.setMonth(endDate.getMonth() + 6);
-
-      const contractPayload = {
-        room_id: contractInfo.room.id,
-        tenant_info: {
-          name: tenantInfo.name,
-          id_card: tenantInfo.id_card,
-          phone: tenantInfo.phone,
-          email: tenantInfo.email,
-          address: tenantInfo.address,
-        },
-        start_date: today.toISOString().split("T")[0],
-        end_date: endDate.toISOString().split("T")[0],
-        deposit_amount: contractInfo.payment.deposit,
-        monthly_rent: contractInfo.payment.rent,
-      };
-
-      // 5. Đặt trạng thái đang ký
       setSignStatus({ signing: true, success: false, error: null });
 
-      // 6. Xử lý ký hợp đồng
-      const contractResponse = await fetch(`${CONFIG.API_URL}/contracts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(contractPayload),
-      });
+      // Trường hợp chưa đăng nhập hoặc ở chế độ khách
+      if (guestMode || !isLoggedIn) {
+        // Chuẩn bị thông tin người dùng
+        const userInfo = {
+          username: contractInfo.tenant.email.split("@")[0],
+          email: contractInfo.tenant.email,
+          password: contractInfo.tenant.phone,
+          phone: contractInfo.tenant.phone,
+          full_name: contractInfo.tenant.name,
+          cccd: contractInfo.tenant.id_card,
+          address: contractInfo.tenant.address || "",
+        };
 
-      // 7. Xử lý kết quả
-      const contractResult = await contractResponse.json();
+        // Đăng ký tài khoản mới
+        const registerResponse = await fetch(
+          `${CONFIG.API_URL}/users/registerFromContract`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(userInfo),
+          }
+        );
 
-      if (!contractResponse.ok) {
-        throw new Error(contractResult.message || "Không thể ký hợp đồng");
-      }
+        const registerData = await registerResponse.json();
 
-      // 8. Cập nhật trạng thái
-      setSignStatus({
-        signing: false,
-        success: true,
-        error: null,
-        contractId: contractResult.data.contractId,
-      });
+        if (!registerResponse.ok) {
+          if (registerData.requireLogin) {
+            setSignStatus({
+              signing: false,
+              success: false,
+              error: "Email đã tồn tại",
+            });
+            showToast(
+              "Email này đã tồn tại. Vui lòng đăng nhập để tiếp tục",
+              "error"
+            );
+            return;
+          }
+          throw new Error(registerData.message || "Không thể tạo tài khoản");
+        }
 
-      // 9. Gọi onConfirm để chuyển đến trang thanh toán
-      if (onConfirm) {
-        onConfirm({
-          contractId: formatContractCode(contractResult.data.contractId), // Format mã hợp đồng
-          displayCode: contractResult.data.displayCode,
-          roomId: contractResult.data.roomId,
-          amount: contractInfo.payment.deposit,
-          isNewContract: true,
+        // Lưu token
+        localStorage.setItem("userToken", registerData.token);
+
+        // Lưu thông tin đăng nhập và hiển thị ngay
+        setCredentials({
+          username: userInfo.username,
+          password: userInfo.password,
+          email: userInfo.email,
         });
+        setShowCredentials(true);
+
+        // Tạo hợp đồng
+        const contractPayload = {
+          room_id: contractInfo.room.id,
+          tenant_info: {
+            name: contractInfo.tenant.name,
+            id_card: contractInfo.tenant.id_card,
+            phone: contractInfo.tenant.phone,
+            email: contractInfo.tenant.email,
+            address: contractInfo.tenant.address || "",
+          },
+          start_date: contractInfo.startDate,
+          end_date: contractInfo.endDate,
+          deposit_amount: contractInfo.payment.deposit,
+          monthly_rent: contractInfo.payment.rent,
+        };
+
+        const contractResponse = await fetch(`${CONFIG.API_URL}/contracts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${registerData.token}`,
+          },
+          body: JSON.stringify(contractPayload),
+        });
+
+        const contractResult = await contractResponse.json();
+
+        if (!contractResponse.ok) {
+          throw new Error(contractResult.message || "Không thể tạo hợp đồng");
+        }
+
+        setSignStatus({
+          signing: false,
+          success: true,
+          error: null,
+          contractId: contractResult.data.contractId,
+          display_code: contractResult.data.display_code,
+        });
+
+        // Đối với người dùng đã đăng nhập, chuyển thẳng đến trang thanh toán
+        if (onConfirm) {
+          onConfirm({
+            contractId: contractResult.data.contractId,
+            displayCode:
+              contractResult.data.display_code ||
+              `HD${String(contractResult.data.contractId).padStart(4, "0")}`,
+            amount: contractInfo.payment.deposit,
+            isNewContract: true,
+          });
+        }
       } else {
-        // Nếu không có onConfirm, chuyển hướng mặc định
-        showToast("Ký hợp đồng thành công", "success");
+        // Xử lý cho người dùng đã đăng nhập
+        const token = localStorage.getItem("userToken");
+        if (!token) {
+          setSignStatus({
+            signing: false,
+            success: false,
+            error: "Vui lòng đăng nhập",
+          });
+          showToast("Vui lòng đăng nhập để ký hợp đồng", "error");
+          return;
+        }
+
+        // Tạo hợp đồng cho người dùng đã đăng nhập
+        const contractPayload = {
+          room_id: contractInfo.room.id,
+          tenant_info: {
+            name: contractInfo.tenant.name,
+            id_card: contractInfo.tenant.id_card,
+            phone: contractInfo.tenant.phone,
+            email: contractInfo.tenant.email,
+            address: contractInfo.tenant.address || "",
+          },
+          start_date: contractInfo.startDate,
+          end_date: contractInfo.endDate,
+          deposit_amount: contractInfo.payment.deposit,
+          monthly_rent: contractInfo.payment.rent,
+        };
+
+        const contractResponse = await fetch(`${CONFIG.API_URL}/contracts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(contractPayload),
+        });
+
+        const contractResult = await contractResponse.json();
+
+        if (!contractResponse.ok) {
+          throw new Error(contractResult.message || "Không thể ký hợp đồng");
+        }
+
+        setSignStatus({
+          signing: false,
+          success: true,
+          error: null,
+          contractId: contractResult.data.contractId,
+          display_code: contractResult.data.display_code,
+        });
+
+        // Đối với người dùng đã đăng nhập, chuyển thẳng đến trang thanh toán
+        if (onConfirm) {
+          onConfirm({
+            contractId: contractResult.data.contractId,
+            displayCode:
+              contractResult.data.display_code ||
+              `HD${String(contractResult.data.contractId).padStart(4, "0")}`,
+            amount: contractInfo.payment.deposit,
+            isNewContract: true,
+          });
+        }
       }
     } catch (error) {
       console.error("Lỗi ký hợp đồng:", error);
-
-      // Cập nhật trạng thái lỗi
       setSignStatus({
         signing: false,
         success: false,
         error: error.message || "Đã xảy ra lỗi khi ký hợp đồng",
-        contractId: null,
       });
-
-      // Hiển thị thông báo lỗi
       showToast(
         `Lỗi: ${error.message || "Đã xảy ra lỗi khi ký hợp đồng"}`,
         "error"
@@ -194,12 +272,142 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     }
   };
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
+  // Render phần thông tin tài khoản
+  const renderCredentialsSection = () => {
+    return (
+      <div className={styles.credentialsContainer}>
+        <div className={styles.credentialsInfo}>
+          <div className={styles.successHeader}>
+            <CheckCircle size={48} className={styles.successIcon} />
+            <h3>Tài khoản của bạn đã được tạo</h3>
+          </div>
+          <div className={styles.credentialDetails}>
+            <div className={styles.credentialItem}>
+              <User size={20} />
+              <div>
+                <span className={styles.label}>Email:</span>
+                <strong>{contractInfo.tenant.email}</strong>
+              </div>
+            </div>
 
+            <div className={styles.credentialItem}>
+              <Lock size={20} />
+              <div>
+                <span className={styles.label}>Mật khẩu:</span>
+                <strong>{credentials?.password}</strong>
+              </div>
+            </div>
+          </div>
+          <div className={styles.credentialWarning}>
+            <AlertCircle size={20} />
+            <p>
+              Đây là tài khoản đăng nhập duy nhất của bạn.
+              <strong> Vui lòng lưu lại thông tin đăng nhập</strong> và đổi mật
+              khẩu ngay sau lần đăng nhập đầu tiên.
+            </p>
+          </div>
+          <div className={styles.contractSummary}>
+            <div className={styles.summaryHeader}>
+              <FileText size={24} />
+              <h3>Chi tiết hợp đồng</h3>
+            </div>
+
+            <div className={styles.summaryGrid}>
+              <div className={styles.summarySection}>
+                <h4>Thông tin phòng</h4>
+                <div className={styles.summaryItem}>
+                  <span>Tên phòng:</span>
+                  <strong>{contractInfo.room.name}</strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Địa chỉ:</span>
+                  <strong>{contractInfo.room.address}</strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Diện tích:</span>
+                  <strong>{contractInfo.room.area || "Chưa cập nhật"}</strong>
+                </div>
+              </div>
+
+              <div className={styles.summarySection}>
+                <h4>Thông tin thuê</h4>
+                <div className={styles.summaryItem}>
+                  <span>Thời hạn:</span>
+                  <strong>
+                    {formatDate(contractInfo.startDate)} -{" "}
+                    {formatDate(contractInfo.endDate)}
+                  </strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Tiền thuê hàng tháng:</span>
+                  <strong className={styles.rentAmount}>
+                    {formatCurrency(contractInfo.payment.rent)}
+                  </strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Tiền đặt cọc:</span>
+                  <strong className={styles.depositAmount}>
+                    {formatCurrency(contractInfo.payment.deposit)}
+                  </strong>
+                </div>
+              </div>
+
+              <div className={styles.summarySection}>
+                <h4>Thông tin người thuê</h4>
+                <div className={styles.summaryItem}>
+                  <span>Họ tên:</span>
+                  <strong>{contractInfo.tenant.name}</strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Số điện thoại:</span>
+                  <strong>{contractInfo.tenant.phone}</strong>
+                </div>
+                <div className={styles.summaryItem}>
+                  <span>Email:</span>
+                  <strong>{contractInfo.tenant.email}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.summaryNote}>
+              <Info size={20} />
+              <p>
+                Vui lòng kiểm tra kỹ thông tin trước khi ký kết. Sau khi ký, bạn
+                sẽ phải thanh toán tiền đặt cọc để hoàn tất quá trình thuê
+                phòng.
+              </p>
+            </div>
+          </div>
+          <div className={styles.nextSteps}>
+            <h4>Các bước tiếp theo:</h4>
+            <ul>
+              <li>Đăng nhập bằng tên đăng nhập và mật khẩu ở trên</li>
+              <li>Thay đổi mật khẩu ngay sau khi đăng nhập lần đầu</li>
+              <li>Kiểm tra và cập nhật đầy đủ thông tin cá nhân</li>
+            </ul>
+          </div>
+          {/* Nút Tiếp tục để chuyển đến trang thanh toán */}
+          <button
+            className={styles.continueBtn}
+            onClick={() => {
+              onConfirm({
+                contractId: signStatus.contractId,
+                displayCode:
+                  signStatus.display_code ||
+                  `HD${signStatus.contractId.toString().padStart(4, "0")}`,
+                amount: contractInfo.payment.deposit,
+                isNewContract: true,
+              });
+            }}
+          >
+            Tiếp tục
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render các trạng thái loading
   if (isChecking) {
     return (
       <div className={styles.modal}>
@@ -213,7 +421,17 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     );
   }
 
-  if (signStatus?.signing) {
+  // Nếu đã hiển thị thông tin tài khoản
+  if (showCredentials) {
+    return (
+      <div className={styles.modal}>
+        <div className={styles.modalContent}>{renderCredentialsSection()}</div>
+      </div>
+    );
+  }
+
+  // Render trạng thái đang ký
+  if (signStatus.signing) {
     return (
       <div className={styles.modal}>
         <div className={styles.modalContent}>
@@ -226,7 +444,8 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     );
   }
 
-  if (signStatus?.success) {
+  // Render trạng thái ký thành công
+  if (signStatus.success) {
     return (
       <div className={styles.modal}>
         <div className={styles.modalContent}>
@@ -243,13 +462,14 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     );
   }
 
-  if (signStatus?.error || error) {
+  // Render trạng thái lỗi
+  if (signStatus.error || error) {
     return (
       <div className={styles.modal}>
         <div className={styles.modalContent}>
           <div className={styles.error}>
             <AlertCircle size={24} />
-            <p>{signStatus?.error || error}</p>
+            <p>{signStatus.error || error}</p>
           </div>
           <div className={styles.actions}>
             <button className={styles.cancelBtn} onClick={onClose}>
@@ -264,24 +484,7 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
     );
   }
 
-  if (!contractInfo) {
-    return (
-      <div className={styles.modal}>
-        <div className={styles.modalContent}>
-          <div className={styles.error}>
-            <AlertCircle size={24} />
-            <p>Không tìm thấy thông tin hợp đồng</p>
-          </div>
-          <div className={styles.actions}>
-            <button className={styles.cancelBtn} onClick={onClose}>
-              Đóng
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Render modal chính
   return (
     <div className={styles.modal}>
       <div className={styles.modalContent}>
@@ -292,32 +495,17 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
           </button>
         </div>
 
-        {showCredentials ? (
-          <div className={styles.credentialsInfo}>
-            <h3>Thông tin tài khoản của bạn</h3>
-            <div className={styles.credentialItem}>
-              <User size={20} />
-              <span>
-                Tên đăng nhập: <strong>{credentials?.username}</strong>
-              </span>
-            </div>
-            <div className={styles.credentialItem}>
-              <Lock size={20} />
-              <span>
-                Mật khẩu: <strong>{credentials?.password}</strong>
-              </span>
-            </div>
-            <p className={styles.credentialNote}>
-              Vui lòng lưu lại thông tin đăng nhập và đổi mật khẩu sau khi đăng
-              nhập lần đầu
-            </p>
+        <div className={styles.contractSummary}>
+          <div className={styles.summaryHeader}>
+            <FileText size={24} />
+            <h3>Chi tiết hợp đồng</h3>
           </div>
-        ) : (
-          <>
-            <div className={styles.contractSummary}>
-              <h3>Thông tin hợp đồng</h3>
+
+          <div className={styles.summaryGrid}>
+            <div className={styles.summarySection}>
+              <h4>Thông tin phòng</h4>
               <div className={styles.summaryItem}>
-                <span>Phòng:</span>
+                <span>Tên phòng:</span>
                 <strong>{contractInfo.room.name}</strong>
               </div>
               <div className={styles.summaryItem}>
@@ -325,106 +513,121 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
                 <strong>{contractInfo.room.address}</strong>
               </div>
               <div className={styles.summaryItem}>
-                <span>Người thuê:</span>
-                <strong>{contractInfo.tenant.name}</strong>
+                <span>Diện tích:</span>
+                <strong>{contractInfo.room.area || "Chưa cập nhật"}</strong>
+              </div>
+            </div>
+
+            <div className={styles.summarySection}>
+              <h4>Thông tin thuê</h4>
+              <div className={styles.summaryItem}>
+                <span>Thời hạn:</span>
+                <strong>
+                  {formatDate(contractInfo.startDate)} -{" "}
+                  {formatDate(contractInfo.endDate)}
+                </strong>
               </div>
               <div className={styles.summaryItem}>
                 <span>Tiền thuê hàng tháng:</span>
-                <strong>{formatCurrency(contractInfo.payment.rent)}</strong>
+                <strong className={styles.rentAmount}>
+                  {formatCurrency(contractInfo.payment.rent)}
+                </strong>
               </div>
               <div className={styles.summaryItem}>
-                <span>Tiền đặt cọc (cần thanh toán):</span>
+                <span>Tiền đặt cọc:</span>
                 <strong className={styles.depositAmount}>
                   {formatCurrency(contractInfo.payment.deposit)}
                 </strong>
               </div>
             </div>
 
-            {guestMode && (
-              <div className={styles.guestModeNotice}>
-                <Info size={20} />
-                <div>
-                  <h4>Lưu ý quan trọng</h4>
-                  <p>
-                    Bằng việc ký hợp đồng, hệ thống sẽ tự động tạo tài khoản với
-                    thông tin bạn đã cung cấp. Mật khẩu mặc định sẽ là số điện
-                    thoại của bạn.
-                  </p>
-                </div>
+            <div className={styles.summarySection}>
+              <h4>Thông tin người thuê</h4>
+              <div className={styles.summaryItem}>
+                <span>Họ tên:</span>
+                <strong>{contractInfo.tenant.name}</strong>
               </div>
-            )}
-
-            <div className={styles.paymentInfo}>
-              <Clock size={20} />
-              <div>
-                <h4>Thời hạn thanh toán</h4>
-                <p>
-                  Vui lòng thanh toán tiền đặt cọc trong vòng 24 giờ sau khi ký
-                  hợp đồng để đảm bảo quyền lợi.
-                </p>
+              <div className={styles.summaryItem}>
+                <span>Số điện thoại:</span>
+                <strong>{contractInfo.tenant.phone}</strong>
+              </div>
+              <div className={styles.summaryItem}>
+                <span>Email:</span>
+                <strong>{contractInfo.tenant.email}</strong>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className={styles.checkList}>
-              <h3>Điều khoản & Điều kiện</h3>
-              <div className={styles.checkItem}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={agreeToPolicies}
-                    onChange={() => setAgreeToPolicies(!agreeToPolicies)}
-                  />
-                  <span>
-                    Tôi đã đọc và đồng ý với tất cả{" "}
-                    <span
-                      className={styles.link}
-                      onClick={() => setShowTerms(true)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      điều khoản và điều kiện
-                    </span>
-                    của hợp đồng.
-                  </span>
-                </label>
-              </div>
-              {showTerms && (
-                <div className={styles.termsModal}>
-                  <ContractTerms onClose={() => setShowTerms(false)} />
-                </div>
-              )}
-              <div className={styles.checkItem}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={confirmAction}
-                    onChange={() => setConfirmAction(!confirmAction)}
-                  />
-                  <span>
-                    Tôi xác nhận thông tin đã cung cấp là chính xác và đồng ý ký
-                    hợp đồng này.
-                  </span>
-                </label>
-              </div>
+        {guestMode && (
+          <div className={styles.guestModeNotice}>
+            <Info size={20} />
+            <div>
+              <h4>Lưu ý quan trọng</h4>
+              <p>
+                Bằng việc ký hợp đồng, hệ thống sẽ tự động tạo tài khoản với
+                thông tin bạn đã cung cấp. Mật khẩu mặc định sẽ là số điện thoại
+                của bạn.
+              </p>
             </div>
-
-            {/* Chỉ hiển thị thông báo khi chưa đăng nhập */}
-            {!isLoggedIn && (
-              <div className={styles.notice}>
-                <AlertCircle size={20} />
-                {userExists ? (
-                  <p>
-                    Email này đã tồn tại. Vui lòng đăng nhập để tiếp tục ký hợp
-                    đồng.
-                  </p>
-                ) : (
-                  <p>
-                    Hệ thống sẽ tạo tài khoản tự động cho bạn khi ký hợp đồng.
-                  </p>
-                )}
-              </div>
-            )}
-          </>
+          </div>
         )}
+
+        {!isLoggedIn && (
+          <div className={styles.notice}>
+            <AlertCircle size={20} />
+            {userExists ? (
+              <p>
+                Email này đã tồn tại. Vui lòng đăng nhập để tiếp tục ký hợp
+                đồng.
+              </p>
+            ) : (
+              <p>Hệ thống sẽ tạo tài khoản tự động cho bạn khi ký hợp đồng.</p>
+            )}
+          </div>
+        )}
+
+        <div className={styles.checkList}>
+          <h3>Điều khoản & Điều kiện</h3>
+          <div className={styles.checkItem}>
+            <label>
+              <input
+                type="checkbox"
+                checked={agreeToPolicies}
+                onChange={() => setAgreeToPolicies(!agreeToPolicies)}
+              />
+              <span>
+                Tôi đã đọc và đồng ý với tất cả{" "}
+                <span
+                  className={styles.link}
+                  onClick={() => setShowTerms(true)}
+                  style={{ cursor: "pointer" }}
+                >
+                  điều khoản và điều kiện
+                </span>
+                của hợp đồng.
+              </span>
+            </label>
+          </div>
+          {showTerms && (
+            <div className={styles.termsModal}>
+              <ContractTerms onClose={() => setShowTerms(false)} />
+            </div>
+          )}
+          <div className={styles.checkItem}>
+            <label>
+              <input
+                type="checkbox"
+                checked={confirmAction}
+                onChange={() => setConfirmAction(!confirmAction)}
+              />
+              <span>
+                Tôi xác nhận thông tin đã cung cấp là chính xác và đồng ý ký hợp
+                đồng này.
+              </span>
+            </label>
+          </div>
+        </div>
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose}>
@@ -432,7 +635,7 @@ const SignContractModal = ({ contractInfo, onClose, onConfirm, guestMode }) => {
           </button>
           <button
             className={styles.confirmBtn}
-            onClick={performContractSigning} // Sử dụng tên hàm mới
+            onClick={performContractSigning}
             disabled={!agreeToPolicies || !confirmAction}
           >
             Xác nhận ký kết

@@ -33,14 +33,14 @@ const PaymentConfirmation = () => {
 
   // Lấy thông tin từ state
   const contractId = location.state?.contractId;
+  const displayCode = location.state?.displayCode;
   const isNewContract = location.state?.isNewContract || false;
 
   // Nếu có displayCode, ưu tiên sử dụng nó
   const displayContractId =
+    displayCode ||
     contractDetails?.display_code ||
-    (contractDetails?.room?.id
-      ? `HD${String(contractDetails.room.id).padStart(4, "0")}`
-      : `HD${String(contractId).padStart(4, "0")}`);
+    (contractId ? `HD${String(contractId).padStart(4, "0")}` : "");
 
   const contractIdStr = contractId ? String(contractId) : "";
 
@@ -48,12 +48,40 @@ const PaymentConfirmation = () => {
     console.log("Received contractId:", contractId);
     console.log("Full location state:", location.state);
 
+    // Lấy thông tin người dùng từ localStorage nếu có
+    const userInfo = localStorage.getItem("userInfo");
+    const parsedUserInfo = userInfo ? JSON.parse(userInfo) : null;
+    const userName = parsedUserInfo?.full_name || parsedUserInfo?.name || "";
+
     // Kiểm tra xem có contractId không
     if (!contractId) {
       showToast("Không tìm thấy thông tin hợp đồng", "error");
       navigate("/");
       return;
     }
+
+    // Lấy thông tin người dùng từ API nếu đã đăng nhập
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        if (!token) return null;
+
+        const response = await fetch(`${CONFIG.API_URL}/users/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+      }
+    };
 
     // Format mã hợp đồng
     const formatContractCode = (id, prefix = "HD") => {
@@ -80,25 +108,40 @@ const PaymentConfirmation = () => {
 
     // Nếu có thông tin về số tiền, có thể hiển thị ngay mà không cần fetch
     if (location.state?.amount) {
-      // Tạo dữ liệu hợp đồng từ state đã có
-      const contractIdStr = String(contractId);
-      setContractDetails({
-        id: contractIdStr.startsWith("HD")
-          ? contractIdStr
-          : `HD${contractIdStr.padStart(4, "0")}`,
-        status: "pending",
-        payment: {
-          deposit: location.state.amount,
-          rent: location.state.amount / 2, // giả sử tiền đặt cọc = 2 tháng tiền thuê
-        },
-        room: {
-          name: "Phòng mới đăng ký",
-          address: "Đang cập nhật",
-        },
-        tenant: {
-          name: "Đang cập nhật",
-        },
-      });
+      // Lấy thông tin người dùng nếu đã đăng nhập
+      const fetchAndSetContractDetails = async () => {
+        const token = localStorage.getItem("userToken");
+        const userProfile = token ? await fetchUserProfile() : null;
+        const userFullName =
+          userProfile?.full_name || userProfile?.name || userName || "";
+
+        // Tạo dữ liệu hợp đồng từ state đã có
+        const contractIdStr = String(contractId);
+        setContractDetails({
+          id: contractIdStr.startsWith("HD")
+            ? contractIdStr
+            : `HD${contractIdStr.padStart(4, "0")}`,
+          status: "pending",
+          payment: {
+            deposit: location.state.amount,
+            rent: location.state.amount / 2, // giả sử tiền đặt cọc = 2 tháng tiền thuê
+          },
+          room: {
+            name: location.state?.room_name || "Phòng mới đăng ký",
+            address: location.state?.room_address || "Đang cập nhật",
+          },
+          tenant: {
+            name: location.state?.tenant_name || userFullName || "Người thuê",
+            full_name:
+              location.state?.tenant_full_name ||
+              location.state?.tenant_name ||
+              userFullName ||
+              "Người thuê",
+          },
+        });
+      };
+
+      fetchAndSetContractDetails();
       return;
     }
 
@@ -106,6 +149,12 @@ const PaymentConfirmation = () => {
     const fetchContractDetails = async () => {
       try {
         const token = localStorage.getItem("userToken");
+
+        // Lấy thông tin người dùng nếu đã đăng nhập
+        const userProfile = token ? await fetchUserProfile() : null;
+        const userFullName =
+          userProfile?.full_name || userProfile?.name || userName || "";
+
         const response = await fetch(
           `${CONFIG.API_URL}/contracts/${numericContractId}`,
           {
@@ -135,7 +184,12 @@ const PaymentConfirmation = () => {
               address: result.data.room_address || "Đang cập nhật",
             },
             tenant: {
-              name: result.data.tenant_name || "Đang cập nhật",
+              name: result.data.tenant_name || userFullName || "Người thuê",
+              full_name:
+                result.data.tenant_full_name ||
+                result.data.tenant_name ||
+                userFullName ||
+                "Người thuê",
             },
           });
         } else {
@@ -159,7 +213,12 @@ const PaymentConfirmation = () => {
               address: "Thông tin sẽ được cập nhật",
             },
             tenant: {
-              name: "Thông tin đang xử lý",
+              name: location.state?.tenant_name || userFullName || "Người thuê",
+              full_name:
+                location.state?.tenant_full_name ||
+                location.state?.tenant_name ||
+                userFullName ||
+                "Người thuê",
             },
           });
         }
@@ -180,7 +239,12 @@ const PaymentConfirmation = () => {
             address: "Đang cập nhật",
           },
           tenant: {
-            name: "Đang cập nhật",
+            name: location.state?.tenant_name || userName || "Người thuê",
+            full_name:
+              location.state?.tenant_full_name ||
+              location.state?.tenant_name ||
+              userName ||
+              "Người thuê",
           },
         });
       }
@@ -304,6 +368,7 @@ const PaymentConfirmation = () => {
         navigate("/payment-success", {
           state: {
             contractId,
+            displayCode: displayContractId,
             amount: contractDetails.payment.deposit,
             method: selectedMethod,
             isNewContract,
@@ -467,13 +532,22 @@ const PaymentConfirmation = () => {
                         <div className={styles.transferNote}>
                           <h4>Nội dung chuyển khoản:</h4>
                           <div className={styles.noteContent}>
-                            <code>DATCOC {contractIdStr}</code>
+                            <code>
+                              DATCOC {displayContractId}{" "}
+                              {contractDetails?.tenant?.full_name ||
+                                contractDetails?.tenant?.name ||
+                                ""}
+                            </code>
                             <button
                               className={styles.copyBtn}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigator.clipboard.writeText(
-                                  `DATCOC ${contractIdStr}`
+                                  `DATCOC ${displayContractId} ${
+                                    contractDetails?.tenant?.full_name ||
+                                    contractDetails?.tenant?.name ||
+                                    ""
+                                  }`
                                 );
                               }}
                             >
@@ -482,7 +556,8 @@ const PaymentConfirmation = () => {
                           </div>
                           <p className={styles.noteText}>
                             * Vui lòng ghi đúng nội dung chuyển khoản để được
-                            xác nhận tự động
+                            xác nhận tự động. Nội dung bao gồm: DATCOC + Mã hợp
+                            đồng + Tên người thuê
                           </p>
                         </div>
                       </div>

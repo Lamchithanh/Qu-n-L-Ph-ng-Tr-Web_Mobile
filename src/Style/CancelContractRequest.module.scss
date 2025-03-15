@@ -1,0 +1,457 @@
+:root {
+  --primary-color: #4f46e5;
+  --secondary-color: #6366f1;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --background-light: #f9fafb;
+  --border-color: #e5e7eb;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --warning-color: #f59e0b;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContainer {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+
+  .headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .headerIcon {
+      color: var(--error-color);
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 0;
+      color: var(--text-primary);
+    }
+  }
+
+  .closeButton {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: var(--text-primary);
+    }
+  }
+}
+
+.modalContent {
+  padding: 20px;
+}
+
+.contractInfo {
+  background-color: var(--background-light);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+
+  .infoItem {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .icon {
+      color: var(--primary-color);
+      margin-top: 2px;
+      margin-right: 10px;
+    }
+
+    .infoContent {
+      flex: 1;
+
+      .label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .value {
+        font-size: 15px;
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 20px 0;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  input[type="date"],
+  textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .helperText {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--warning-color);
+
+    svg {
+      color: var(--warning-color);
+    }
+  }
+}
+
+.reasonSelector {
+  position: relative;
+
+  .dropdownHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: white;
+
+    &:hover {
+      border-color: var(--primary-color);
+    }
+  }
+
+  .dropdownOptions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+
+    &:hover,
+    &:focus,
+    &:active {
+      display: block;
+    }
+  }
+
+  .dropdownHeader:focus + .dropdownOptions,
+  .dropdownHeader:active + .dropdownOptions {
+    display: block;
+  }
+
+  &:hover .dropdownOptions {
+    display: block;
+  }
+
+  .option {
+    padding: 10px 12px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--background-light);
+    }
+  }
+}
+
+.noteBox {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+
+  .icon {
+    color: var(--warning-color);
+    flex-shrink: 0;
+  }
+
+  .noteContent {
+    h4 {
+      font-size: 14px;
+      margin: 0 0 8px;
+      color: var(--text-primary);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 16px;
+
+      li {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
+.checkboxWrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 20px;
+
+  input[type="checkbox"] {
+    margin-top: 3px;
+  }
+
+  label {
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  button {
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .cancelButton {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+
+    &:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+  }
+
+  .submitButton {
+    background-color: var(--primary-color);
+    border: none;
+    color: white;
+
+    &:hover {
+      background-color: var(--secondary-color);
+    }
+  }
+}
+
+.securityNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+
+  .icon {
+    color: var(--primary-color);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+// Confirmation Screen Styles
+.confirmationScreen {
+  padding: 24px;
+  text-align: center;
+}
+
+.confirmationHeader {
+  margin-bottom: 24px;
+
+  .warningIcon {
+    color: var(--warning-color);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin: 0 0 8px;
+    color: var(--text-primary);
+  }
+
+  p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+}
+
+.confirmationDetails {
+  background-color: var(--background-light);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+
+  .confirmationItem {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 14px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      color: var(--text-secondary);
+    }
+
+    .value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+  }
+}
+
+.warningBox {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+}
+
+.confirmationActions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .backButton {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+
+    &:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+  }
+
+  .confirmButton {
+    background-color: var(--error-color);
+    border: none;
+    color: white;
+
+    &:hover {
+      background-color: darken(#ef4444, 10%);
+    }
+  }
+}

@@ -103,6 +103,8 @@ const NotificationPage = lazy(() =>
 const MaintenanceRequest = lazy(() =>
   import("./Frontend/pages/MaintenanceRequest")
 );
+// Import NotFoundPage component
+const NotFoundPage = lazy(() => import("./Frontend/components/NotFoundPage"));
 
 const NavigationTracker = ({ children }) => {
   const location = useLocation();
@@ -214,6 +216,9 @@ const App = () => {
                     <Route path="users" element={<AdminUserManagement />} />
                     <Route path="settings" element={<AquacultureDashboard />} />
                   </Route>
+
+                  {/* 404 Page - Bắt tất cả các đường dẫn không khớp */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
             </NavigationTracker>

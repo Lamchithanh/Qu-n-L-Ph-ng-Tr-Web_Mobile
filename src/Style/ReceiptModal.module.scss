@@ -1,163 +1,303 @@
+// Variables
+$primary-color: #4f46e5;
+$success-color: #10b981;
+$text-primary: #1f2937;
+$text-secondary: #6b7280;
+$background-light: #f9fafb;
+$border-color: #e5e7eb;
+$receipt-bg: #ffffff;
+$receipt-border: #e2e8f0;
+$receipt-header: #f8fafc;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  padding: 1rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 
-.receiptModal {
+.modalContent {
   background: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .modalHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid $border-color;
 
-  .logoSection {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .logoIcon {
-      color: #4a90e2;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 1.2rem;
-      color: #333;
-    }
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0;
   }
 
   .closeButton {
-    background: none;
+    background: transparent;
     border: none;
-    color: #6c757d;
+    color: $text-secondary;
     cursor: pointer;
-    transition: color 0.3s;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
 
     &:hover {
-      color: #dc3545;
+      background: $background-light;
     }
   }
 }
 
-.receiptContent {
-  padding: 20px;
+.receiptContainer {
+  background: $receipt-bg;
+  border: 1px solid $receipt-border;
+  border-radius: 0.5rem;
+  margin: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.receiptHeader {
+  background: $receipt-header;
+  padding: 1.25rem;
+  border-bottom: 1px solid $receipt-border;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .receiptLogo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    svg {
+      color: $primary-color;
+    }
+
+    span {
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: $text-primary;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  .receiptDate {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $text-secondary;
+    font-size: 0.875rem;
+
+    svg {
+      color: $text-secondary;
+    }
+  }
+}
+
+.receiptBody {
+  padding: 1.5rem;
 }
 
 .receiptSection {
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
 
-  .sectionHeader {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $receipt-border;
+  }
 
-    svg {
-      color: #4a90e2;
-    }
-
-    h3 {
-      margin: 0;
-      font-size: 1rem;
-      color: #333;
-    }
+  &:last-child {
+    margin-bottom: 0;
   }
 }
 
-.detailRow {
+.receiptRow {
   display: flex;
   justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #e9ecef;
-
-  span {
-    color: #6c757d;
-  }
-
-  strong {
-    color: #333;
-  }
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed $receipt-border;
 
   &:last-child {
     border-bottom: none;
   }
 
-  .amount {
-    color: #28a745;
-    font-size: 1.1rem;
+  span {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  strong {
+    color: $text-primary;
+    font-weight: 500;
+
+    &.amount {
+      color: $primary-color;
+      font-weight: 600;
+    }
+
+    &.status {
+      color: $success-color;
+      font-weight: 600;
+    }
+
+    &.confirmationCode {
+      font-family: "Courier New", monospace;
+      letter-spacing: 0.05em;
+    }
+  }
+}
+
+.customerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.customerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  svg {
+    color: $primary-color;
+    flex-shrink: 0;
+  }
+
+  span {
+    color: $text-secondary;
+    font-size: 0.875rem;
+    min-width: 100px;
+  }
+
+  strong {
+    color: $text-primary;
+    font-weight: 500;
+  }
+}
+
+.receiptNote {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: $background-light;
+  border-radius: 0.5rem;
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: $text-secondary;
+    line-height: 1.5;
   }
 }
 
 .receiptFooter {
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background: $receipt-header;
+  padding: 1.25rem;
+  border-top: 1px solid $receipt-border;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
-  .footerNotice {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    color: #6c757d;
-
-    svg {
-      color: #4a90e2;
+  .footerInfo {
+    p {
+      margin: 0;
+      font-size: 0.75rem;
+      color: $text-secondary;
+      line-height: 1.5;
     }
   }
 
-  .actions {
+  .footerLogo {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      color: $primary-color;
+    }
+
+    span {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: $primary-color;
+    }
   }
 }
 
-.downloadBtn,
-.closeModalBtn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
+.modalActions {
+  padding: 1.5rem;
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.3s;
-}
+  border-top: 1px solid $border-color;
 
-.downloadBtn {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
+  .downloadButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: $primary-color;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
 
-  &:hover {
-    background-color: darken(#4a90e2, 10%);
+    &:hover {
+      background: darken($primary-color, 5%);
+    }
   }
 }
 
-.closeModalBtn {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  color: #6c757d;
+@media (max-width: 640px) {
+  .modalContent {
+    max-height: 85vh;
+  }
 
-  &:hover {
-    background-color: #e9ecef;
+  .receiptHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .receiptFooter {
+    flex-direction: column;
+    gap: 1rem;
+
+    .footerInfo {
+      order: 2;
+    }
+
+    .footerLogo {
+      order: 1;
+    }
   }
 }

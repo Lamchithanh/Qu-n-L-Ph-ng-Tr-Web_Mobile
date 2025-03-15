@@ -28,6 +28,13 @@ const formatContractId = (id) => {
   return `HD${id.toString().padStart(4, "0")}`;
 };
 
+// Hàm tạo mã hợp đồng từ ID hợp đồng
+const generateContractCode = () => {
+  // Tạo ID ngẫu nhiên từ 1-9999
+  const randomId = Math.floor(Math.random() * 9999) + 1;
+  return formatContractId(randomId);
+};
+
 const RentalContract = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -704,16 +711,21 @@ const RentalContract = () => {
 
           const createContractResult = await createContractResponse.json();
 
-          // Chuyển đến trang thanh toán
-          navigate("/payment-confirmation", {
-            state: {
+          // Đối với người dùng đã đăng nhập, chuyển thẳng đến trang thanh toán
+          if (onConfirm) {
+            onConfirm({
               contractId: createContractResult.data.contractId,
-              displayCode: createContractResult.data.displayCode,
+              displayCode:
+                createContractResult.data.display_code ||
+                `HD${String(createContractResult.data.contractId).padStart(
+                  4,
+                  "0"
+                )}`,
               roomId: createContractResult.data.roomId,
               amount: contractData.payment.deposit,
               isNewContract: true,
-            },
-          });
+            });
+          }
         } else {
           // Ký hợp đồng hiện tại
           const contractResponse = await fetch(
@@ -739,7 +751,12 @@ const RentalContract = () => {
           navigate("/payment-confirmation", {
             state: {
               contractId: contractData.id,
+              displayCode:
+                contractData.display_code ||
+                `HD${String(contractData.id).padStart(4, "0")}`,
+              roomId: contractData.roomId,
               amount: contractData.payment.deposit,
+              isNewContract: false,
             },
           });
         }
@@ -1283,13 +1300,17 @@ const RentalContract = () => {
                   navigate("/payment-confirmation", {
                     state: {
                       contractId: data.contractId,
+                      displayCode:
+                        data.display_code ||
+                        `HD${String(data.contractId).padStart(4, "0")}`,
+                      roomId: data.roomId,
                       amount: data.amount,
                       isNewContract: data.isNewContract,
                     },
                   });
                   setShowSignModal(false);
                 }}
-                onSignContract={handleSignContract} // Đổi tên thành onSignContract
+                onSignContract={handleSignContract}
                 signStatus={signStatus}
                 guestMode={guestMode}
               />

@@ -21,8 +21,17 @@ const Toast = () => {
     info: "bg-blue-100 border-blue-500",
   };
 
+  // Sử dụng inline style với z-index cao
+  const toastContainerStyle = {
+    position: "fixed",
+    top: "90px", // Điều chỉnh vị trí phù hợp để không bị che bởi header
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 10000, // Giá trị cao hơn z-index của header (9000)
+  };
+
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+    <div style={toastContainerStyle}>
       <div
         className={`
           flex items-center p-4 rounded-lg shadow-lg border

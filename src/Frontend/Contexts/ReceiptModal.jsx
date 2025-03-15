@@ -10,6 +10,8 @@ import {
   User,
   Building2,
   Shield,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "../../Style/ReceiptModal.module.scss";
@@ -18,11 +20,11 @@ import { CONFIG } from "../config/config";
 const ReceiptModal = ({ isOpen, onClose, receiptData, onDownload }) => {
   if (!isOpen) return null;
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(value);
+    }).format(amount);
   };
 
   const formatDate = (dateString) => {
@@ -35,6 +37,12 @@ const ReceiptModal = ({ isOpen, onClose, receiptData, onDownload }) => {
 
   const fetchFullReceiptData = async () => {
     try {
+      // Sử dụng dữ liệu hiện tại để tạo biên nhận
+      onDownload(receiptData);
+
+      // Không gọi API vì hiện tại endpoint không tồn tại
+      // Đoạn code dưới đây đã được comment để tránh lỗi 404
+      /*
       const token = localStorage.getItem("userToken");
       if (!token) {
         throw new Error("Không có phiên đăng nhập");
@@ -64,6 +72,7 @@ const ReceiptModal = ({ isOpen, onClose, receiptData, onDownload }) => {
         amount: paymentData.data.amount,
         paymentMethod: paymentData.data.payment_method,
       });
+      */
     } catch (error) {
       console.error("Lỗi lấy thông tin biên nhận:", error);
       // Fallback sử dụng dữ liệu hiện tại
@@ -72,103 +81,112 @@ const ReceiptModal = ({ isOpen, onClose, receiptData, onDownload }) => {
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className={styles.modalOverlay}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <motion.div
-          className={styles.receiptModal}
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-        >
-          <div className={styles.modalHeader}>
-            <div className={styles.logoSection}>
-              <FileText size={32} className={styles.logoIcon} />
-              <h2>Biên nhận thanh toán</h2>
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
+        <div className={styles.modalHeader}>
+          <h2>Biên nhận thanh toán</h2>
+          <button className={styles.closeButton} onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className={styles.receiptContainer}>
+          <div className={styles.receiptHeader}>
+            <div className={styles.receiptLogo}>
+              <FileText size={24} />
+              <span>BIÊN NHẬN THANH TOÁN</span>
             </div>
-            <button onClick={onClose} className={styles.closeButton}>
-              <X size={24} />
-            </button>
+            <div className={styles.receiptDate}>
+              <Calendar size={16} />
+              <span>
+                Ngày thanh toán:{" "}
+                {receiptData.transactionDate ||
+                  new Date().toLocaleDateString("vi-VN")}
+              </span>
+            </div>
           </div>
 
-          <div className={styles.receiptContent}>
+          <div className={styles.receiptBody}>
             <div className={styles.receiptSection}>
-              <div className={styles.sectionHeader}>
-                <FileText size={20} />
-                <h3>Thông tin hợp đồng</h3>
-              </div>
-              <div className={styles.detailRow}>
+              <h3>Thông tin giao dịch</h3>
+              <div className={styles.receiptRow}>
                 <span>Mã hợp đồng:</span>
                 <strong>{receiptData.contractId}</strong>
               </div>
-              <div className={styles.detailRow}>
-                <span>Mã xác nhận:</span>
-                <strong>{receiptData.confirmationCode || "Chưa có"}</strong>
+              <div className={styles.receiptRow}>
+                <span>Mã giao dịch:</span>
+                <strong className={styles.confirmationCode}>
+                  {receiptData.confirmationCode}
+                </strong>
               </div>
-            </div>
-
-            <div className={styles.receiptSection}>
-              <div className={styles.sectionHeader}>
-                <Calendar size={20} />
-                <h3>Chi tiết thanh toán</h3>
-              </div>
-              <div className={styles.detailRow}>
-                <span>Ngày thanh toán:</span>
-                <strong>{formatDate(new Date())}</strong>
-              </div>
-              <div className={styles.detailRow}>
-                <span>Số tiền:</span>
+              <div className={styles.receiptRow}>
+                <span>Số tiền thanh toán:</span>
                 <strong className={styles.amount}>
                   {formatCurrency(receiptData.amount)}
                 </strong>
               </div>
-              <div className={styles.detailRow}>
+              <div className={styles.receiptRow}>
                 <span>Phương thức:</span>
-                <strong>{receiptData.method || "Chuyển khoản"}</strong>
+                <strong>{receiptData.method}</strong>
+              </div>
+              <div className={styles.receiptRow}>
+                <span>Trạng thái:</span>
+                <strong className={styles.status}>Đã thanh toán</strong>
               </div>
             </div>
 
             <div className={styles.receiptSection}>
-              <div className={styles.sectionHeader}>
-                <User size={20} />
-                <h3>Thông tin người thanh toán</h3>
+              <h3>Thông tin người thanh toán</h3>
+              <div className={styles.customerInfo}>
+                <div className={styles.customerRow}>
+                  <User size={16} />
+                  <span>Họ tên:</span>
+                  <strong>{receiptData.tenantName || "Chưa cập nhật"}</strong>
+                </div>
+                <div className={styles.customerRow}>
+                  <Mail size={16} />
+                  <span>Email:</span>
+                  <strong>{receiptData.tenantEmail || "Chưa cập nhật"}</strong>
+                </div>
+                <div className={styles.customerRow}>
+                  <Phone size={16} />
+                  <span>Số điện thoại:</span>
+                  <strong>{receiptData.tenantPhone || "Chưa cập nhật"}</strong>
+                </div>
               </div>
-              <div className={styles.detailRow}>
-                <span>Tên:</span>
-                <strong>{receiptData.tenantName || "Chưa cập nhật"}</strong>
-              </div>
-              <div className={styles.detailRow}>
-                <span>Email:</span>
-                <strong>{receiptData.tenantEmail || "Chưa cập nhật"}</strong>
-              </div>
+            </div>
+
+            <div className={styles.receiptNote}>
+              <p>
+                Biên nhận này là xác nhận cho việc đặt cọc hợp đồng thuê phòng.
+                Vui lòng giữ lại biên nhận này để xuất trình khi cần thiết.
+              </p>
             </div>
           </div>
 
           <div className={styles.receiptFooter}>
-            <div className={styles.footerNotice}>
-              <Shield size={20} />
-              <p>Biên nhận được bảo vệ và xác thực điện tử</p>
+            <div className={styles.footerInfo}>
+              <p>Biên nhận điện tử - Hệ thống Quản lý cho thuê phòng</p>
+              <p>Mã xác thực: {receiptData.confirmationCode}</p>
             </div>
-            <div className={styles.actions}>
-              <button
-                className={styles.downloadBtn}
-                onClick={fetchFullReceiptData}
-              >
-                <Download size={20} />
-                Tải PDF
-              </button>
-              <button className={styles.closeModalBtn} onClick={onClose}>
-                Đóng
-              </button>
+            <div className={styles.footerLogo}>
+              <FileText size={16} />
+              <span>QLPT</span>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+
+        <div className={styles.modalActions}>
+          <button
+            className={styles.downloadButton}
+            onClick={fetchFullReceiptData}
+          >
+            <Download size={20} />
+            Tải biên nhận
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

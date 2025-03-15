@@ -13,13 +13,33 @@ import {
   Camera,
 } from "lucide-react";
 import styles from "../../Style/RoomDetailModal.module.scss";
+import ExtendContractRequest from "../components/ExtendContractRequest";
 
 const RoomDetailModal = ({ room, onClose }) => {
   // State for active sub-section
   const [activeSection, setActiveSection] = useState("details");
+  // State để hiển thị form gia hạn hợp đồng
+  const [showExtendContract, setShowExtendContract] = useState(false);
 
   // If no room is selected, return null
   if (!room) return null;
+
+  // Xử lý nút gia hạn hợp đồng
+  const handleExtendContract = () => {
+    setShowExtendContract(true);
+  };
+
+  // Xử lý khi đóng form gia hạn
+  const handleCloseExtendForm = () => {
+    setShowExtendContract(false);
+  };
+
+  // Xử lý khi gửi yêu cầu gia hạn
+  const handleSubmitExtendRequest = (requestData) => {
+    console.log("Extend contract request:", requestData);
+    // Gọi API hoặc xử lý logic khi gửi yêu cầu gia hạn
+    setShowExtendContract(false);
+  };
 
   // Render different sections based on active tab
   const renderSection = () => {
@@ -130,49 +150,80 @@ const RoomDetailModal = ({ room, onClose }) => {
     }
   };
 
+  // Tạo dữ liệu hợp đồng cho form gia hạn
+  const contractData = {
+    id: room.id || "R001",
+    display_code: room.contractId || "HD-2023-" + room.roomNumber,
+    room: {
+      name: `Phòng ${room.roomNumber}`,
+    },
+    endDate: room.endDate || "2024-12-31",
+    payment: {
+      rent: parseInt(room.monthlyRent?.replace(/[^\d]/g, "")) || 3500000,
+    },
+  };
+
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <button className={styles.closeButton} onClick={onClose}>
-          <X />
-        </button>
-
-        <div className={styles.modalHeader}>
-          <Home className={styles.headerIcon} />
-          <h2>Chi tiết phòng {room.roomNumber}</h2>
-        </div>
-
-        {/* Navigation for sub-sections */}
-        <div className={styles.modalNavigation}>
-          <button
-            className={activeSection === "details" ? styles.activeNav : ""}
-            onClick={() => setActiveSection("details")}
-          >
-            <CheckCircle /> Chi tiết
+    <>
+      <div className={styles.modalOverlay}>
+        <div className={styles.modalContent}>
+          <button className={styles.closeButton} onClick={onClose}>
+            <X />
           </button>
-          <button
-            className={activeSection === "documents" ? styles.activeNav : ""}
-            onClick={() => setActiveSection("documents")}
-          >
-            <FileText /> Tài liệu
-          </button>
-          <button
-            className={activeSection === "maintenance" ? styles.activeNav : ""}
-            onClick={() => setActiveSection("maintenance")}
-          >
-            <MessageCircle /> Bảo trì
-          </button>
-        </div>
 
-        {/* Dynamic section rendering */}
-        {renderSection()}
+          <div className={styles.modalHeader}>
+            <Home className={styles.headerIcon} />
+            <h2>Chi tiết phòng {room.roomNumber}</h2>
+          </div>
 
-        <div className={styles.actionButtons}>
-          <button className={styles.primaryButton}>Gia hạn hợp đồng</button>
-          <button className={styles.secondaryButton}>Báo sự cố</button>
+          {/* Navigation for sub-sections */}
+          <div className={styles.modalNavigation}>
+            <button
+              className={activeSection === "details" ? styles.activeNav : ""}
+              onClick={() => setActiveSection("details")}
+            >
+              <CheckCircle /> Chi tiết
+            </button>
+            <button
+              className={activeSection === "documents" ? styles.activeNav : ""}
+              onClick={() => setActiveSection("documents")}
+            >
+              <FileText /> Tài liệu
+            </button>
+            <button
+              className={
+                activeSection === "maintenance" ? styles.activeNav : ""
+              }
+              onClick={() => setActiveSection("maintenance")}
+            >
+              <MessageCircle /> Bảo trì
+            </button>
+          </div>
+
+          {/* Dynamic section rendering */}
+          {renderSection()}
+
+          <div className={styles.actionButtons}>
+            <button
+              className={styles.primaryButton}
+              onClick={handleExtendContract}
+            >
+              Gia hạn hợp đồng
+            </button>
+            {/* <button className={styles.secondaryButton}>Báo sự cố</button> */}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Hiển thị form gia hạn hợp đồng nếu showExtendContract = true */}
+      {showExtendContract && (
+        <ExtendContractRequest
+          contract={contractData}
+          onClose={handleCloseExtendForm}
+          onSubmit={handleSubmitExtendRequest}
+        />
+      )}
+    </>
   );
 };
 

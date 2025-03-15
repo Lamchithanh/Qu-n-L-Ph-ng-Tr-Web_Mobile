@@ -1,137 +1,316 @@
 // PaymentSuccess.module.scss
+// Variables
+$primary-color: #4f46e5;
+$success-color: #10b981;
+$text-primary: #1f2937;
+$text-secondary: #6b7280;
+$background-light: #f9fafb;
+$border-color: #e5e7eb;
+$receipt-bg: #ffffff;
+$receipt-border: #e2e8f0;
+$receipt-header: #f8fafc;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 .container {
-  min-height: 100vh;
-  background: linear-gradient(145deg, #f3f4f6, #ffffff);
-  padding: 2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 
 .card {
   background: white;
   border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 2rem;
-  max-width: 600px;
-  width: 100%;
   text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
 
-  .successIcon {
-    width: 80px;
-    height: 80px;
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.5rem;
-    color: #10b981;
+.successIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+
+  svg {
+    color: $success-color;
+  }
+}
+
+h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 1rem;
+}
+
+.message {
+  color: $text-secondary;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.details {
+  background: $background-light;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid $border-color;
+
+  &:last-child {
+    border-bottom: none;
   }
 
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #10b981;
+  span {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  strong {
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
+.confirmationCode {
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.05em;
+  color: $primary-color !important;
+}
+
+.notice {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+
+  h3 {
+    color: #9a3412;
+    font-size: 1.125rem;
+    font-weight: 600;
     margin-bottom: 1rem;
   }
 
-  .message {
-    color: #64748b;
-    margin-bottom: 2rem;
+  ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #7c2d12;
   }
 
-  .details {
-    text-align: left;
-    margin-bottom: 2rem;
+  li {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
 
-    .detailItem {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.75rem 0;
-      border-bottom: 1px dashed #e2e8f0;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      span {
-        color: #64748b;
-      }
-
-      strong {
-        color: #1e293b;
-
-        &.confirmationCode {
-          font-family: monospace;
-          color: #4f46e5;
-          font-size: 1.125rem;
-        }
-      }
+    &:last-child {
+      margin-bottom: 0;
     }
   }
 
-  .notice {
-    background: #f8fafc;
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    text-align: left;
-    margin-bottom: 2rem;
+  strong {
+    font-family: "Courier New", monospace;
+    letter-spacing: 0.05em;
+    color: #9a3412;
+  }
+}
 
-    h3 {
-      font-size: 1rem;
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+}
+
+.downloadBtn {
+  background: $primary-color;
+  color: white;
+  border: none;
+
+  &:hover {
+    background: darken($primary-color, 5%);
+  }
+}
+
+.viewBtn {
+  background: white;
+  color: $primary-color;
+  border: 1px solid $primary-color;
+
+  &:hover {
+    background: rgba($primary-color, 0.05);
+  }
+}
+
+.homeBtn {
+  background: $background-light;
+  color: $text-secondary;
+  border: 1px solid $border-color;
+
+  &:hover {
+    background: darken($background-light, 5%);
+  }
+}
+
+// Biên nhận thanh toán
+.receiptPreview {
+  margin-bottom: 2rem;
+  text-align: left;
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+}
+
+.receiptContent {
+  background: $receipt-bg;
+  border: 1px solid $receipt-border;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.receiptHeader {
+  background: $receipt-header;
+  padding: 1.25rem;
+  border-bottom: 1px solid $receipt-border;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .receiptLogo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    svg {
+      color: $primary-color;
+    }
+
+    span {
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: $text-primary;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  .receiptDate {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $text-secondary;
+    font-size: 0.875rem;
+
+    svg {
+      color: $text-secondary;
+    }
+  }
+}
+
+.receiptDetails {
+  padding: 1.5rem;
+  border-bottom: 1px solid $receipt-border;
+
+  .receiptRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed $receipt-border;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    span {
+      color: $text-secondary;
+      font-size: 0.875rem;
+    }
+
+    strong {
+      color: $text-primary;
       font-weight: 600;
-      color: #1e293b;
-      margin-bottom: 1rem;
     }
+  }
+}
 
-    ol {
-      padding-left: 1.5rem;
-      color: #64748b;
+.receiptCustomer {
+  padding: 1.5rem;
+  border-bottom: 1px solid $receipt-border;
 
-      li {
-        margin-bottom: 0.5rem;
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 1rem 0;
+  }
 
-        strong {
-          color: #4f46e5;
-          font-family: monospace;
-        }
-      }
+  .customerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .customerRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: $text-secondary;
+    font-size: 0.875rem;
+
+    svg {
+      color: $primary-color;
     }
+  }
+}
+
+.receiptFooter {
+  padding: 1rem;
+  background: $receipt-header;
+  text-align: center;
+
+  p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: $text-secondary;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1.5rem;
   }
 
   .actions {
-    display: flex;
-    gap: 1rem;
+    flex-direction: column;
 
     button {
-      flex: 1;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-
-      &.downloadBtn {
-        background: #4f46e5;
-        color: white;
-
-        &:hover {
-          background: #4338ca;
-        }
-      }
-
-      &.homeBtn {
-        background: #f1f5f9;
-        color: #64748b;
-
-        &:hover {
-          background: #e2e8f0;
-        }
-      }
+      width: 100%;
     }
   }
 }

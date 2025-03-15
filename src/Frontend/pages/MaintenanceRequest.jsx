@@ -6,6 +6,8 @@ import {
   Clock,
   XCircle,
   MessageCircle,
+  Home,
+  FileText,
 } from "lucide-react";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
@@ -25,6 +27,8 @@ const MaintenanceRequest = () => {
   const [preview, setPreview] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recentRequests, setRecentRequests] = useState([]);
+  const [contractInfo, setContractInfo] = useState(null);
+  const [roomInfo, setRoomInfo] = useState(null);
 
   const categories = [
     { id: "electricity", label: "Điện", icon: "⚡" },
@@ -50,8 +54,60 @@ const MaintenanceRequest = () => {
         // Đảm bảo đúng cấu trúc dữ liệu trả về
         if (response.data && response.data.maintenance_requests) {
           setRecentRequests(response.data.maintenance_requests);
+
+          // Lấy thông tin phòng từ yêu cầu bảo trì đầu tiên nếu có
+          if (response.data.maintenance_requests.length > 0) {
+            const firstRequest = response.data.maintenance_requests[0];
+            if (firstRequest.room_number && firstRequest.room_title) {
+              setRoomInfo({
+                roomNumber: firstRequest.room_number,
+                roomTitle: firstRequest.room_title,
+              });
+            }
+          }
         } else {
           setRecentRequests(response.data || []);
+        }
+
+        // Lấy thông tin hợp đồng
+        try {
+          const profileResponse = await axios.get(
+            `${CONFIG.API_URL}/users/profile`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
+          if (
+            profileResponse.data &&
+            profileResponse.data.rental_history &&
+            profileResponse.data.rental_history.length > 0
+          ) {
+            const activeContract = profileResponse.data.rental_history.find(
+              (contract) => contract.status === "active"
+            );
+
+            if (activeContract) {
+              setContractInfo({
+                contractId: activeContract.id,
+                contractCode: activeContract.contract_code,
+                startDate: activeContract.start_date,
+                endDate: activeContract.end_date,
+                roomNumber: activeContract.room_number,
+                roomTitle: activeContract.room_title,
+              });
+
+              // Nếu không có thông tin phòng từ yêu cầu bảo trì, lấy từ hợp đồng
+              if (!roomInfo && activeContract.room_number) {
+                setRoomInfo({
+                  roomNumber: activeContract.room_number,
+                  roomTitle: activeContract.room_title,
+                });
+              }
+            }
+          }
+        } catch (profileError) {
+          console.error("Error fetching profile:", profileError);
         }
 
         setLoading(false);
@@ -122,6 +178,8 @@ const MaintenanceRequest = () => {
             ...formData,
             status: "pending",
             created_at: new Date(),
+            room_number: roomInfo?.roomNumber,
+            room_title: roomInfo?.roomTitle,
           }
         : response.data;
 
@@ -228,6 +286,11 @@ const MaintenanceRequest = () => {
             </h3>
             <p className="text-sm text-gray-500">
               {new Date(request.created_at).toLocaleDateString()}
+              {request.room_number && (
+                <span className="ml-2 text-indigo-600">
+                  • Phòng {request.room_number}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -291,6 +354,38 @@ const MaintenanceRequest = () => {
           Gửi báo cáo về các vấn đề cần sửa chữa hoặc hỗ trợ
         </p>
       </div>
+
+      {/* Hiển thị thông tin phòng và hợp đồng */}
+      {(roomInfo || contractInfo) && (
+        <div className="bg-indigo-50 rounded-xl p-4 mb-6 border border-indigo-100">
+          <div className="flex items-start gap-6">
+            {roomInfo && (
+              <div className="flex items-center">
+                <Home className="text-indigo-600 mr-2" size={20} />
+                <div>
+                  <p className="text-sm text-gray-500">Phòng của bạn</p>
+                  <p className="font-medium text-indigo-700">
+                    {roomInfo.roomTitle || `Phòng ${roomInfo.roomNumber}`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {contractInfo && (
+              <div className="flex items-center">
+                <FileText className="text-indigo-600 mr-2" size={20} />
+                <div>
+                  <p className="text-sm text-gray-500">Hợp đồng</p>
+                  <p className="font-medium text-indigo-700">
+                    {contractInfo.contractCode ||
+                      `HD${contractInfo.contractId}`}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">

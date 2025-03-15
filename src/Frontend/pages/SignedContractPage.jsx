@@ -33,6 +33,8 @@ import styles from "../../Style/SignedContract.module.scss";
 import { CONFIG } from "../config/config";
 import { useToast } from "../Contexts/ToastContext";
 import MaQR from "../../assets/VCB_QR.png";
+import ExtendContractRequest from "../components/ExtendContractRequest";
+import CancelContractRequest from "../components/CancelContractRequest";
 
 // Hàm tạo mã hợp đồng từ ID
 const formatContractId = (id) => {
@@ -54,6 +56,8 @@ const SignedContractPage = () => {
   const [showQRCode, setShowQRCode] = useState(false);
   const [serviceHistory, setServiceHistory] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
 
   // Fetch contract data
   useEffect(() => {
@@ -332,6 +336,31 @@ const SignedContractPage = () => {
 
     fetchContractData();
   }, [contractId]);
+
+  const handleCancelRequest = (requestData) => {
+    console.log("Yêu cầu hủy hợp đồng:", requestData);
+    // Gửi dữ liệu đến API
+    // API.post('/contract-requests/cancel', requestData)
+    //   .then(response => {
+    //     // Xử lý kết quả
+    //   })
+    //   .catch(error => {
+    //     // Xử lý lỗi
+    //   });
+  };
+
+  // Thêm hàm xử lý để gửi yêu cầu gia hạn hợp đồng
+  const handleExtendRequest = (requestData) => {
+    console.log("Yêu cầu gia hạn hợp đồng:", requestData);
+    // Gửi dữ liệu đến API
+    // API.post('/contract-requests/extend', requestData)
+    //   .then(response => {
+    //     // Xử lý kết quả
+    //   })
+    //   .catch(error => {
+    //     // Xử lý lỗi
+    //   });
+  };
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -1227,15 +1256,7 @@ const SignedContractPage = () => {
             <div className={styles.footerActions}>
               <button
                 className={styles.cancelButton}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Bạn có chắc chắn muốn yêu cầu hủy hợp đồng?"
-                    )
-                  ) {
-                    showToast("Yêu cầu hủy hợp đồng đã được gửi", "info");
-                  }
-                }}
+                onClick={() => setShowCancelModal(true)}
               >
                 <X size={16} />
                 Yêu cầu hủy hợp đồng
@@ -1243,14 +1264,29 @@ const SignedContractPage = () => {
 
               <button
                 className={styles.extendButton}
-                onClick={() => {
-                  showToast("Yêu cầu gia hạn đã được gửi", "info");
-                }}
+                onClick={() => setShowExtendModal(true)}
               >
                 <Edit size={16} />
                 Yêu cầu gia hạn
               </button>
             </div>
+
+            {/* Thêm các modal component vào cuối file, ngay trước thẻ đóng </> của fragment */}
+            {showCancelModal && (
+              <CancelContractRequest
+                contract={contract}
+                onClose={() => setShowCancelModal(false)}
+                onSubmit={handleCancelRequest}
+              />
+            )}
+
+            {showExtendModal && (
+              <ExtendContractRequest
+                contract={contract}
+                onClose={() => setShowExtendModal(false)}
+                onSubmit={handleExtendRequest}
+              />
+            )}
           </div>
         </>
       )}

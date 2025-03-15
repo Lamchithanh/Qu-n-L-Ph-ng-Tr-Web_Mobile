@@ -303,7 +303,8 @@ export const checkUser = async (req, res) => {
 // Đăng ký tài khoản từ thông tin hợp đồng
 export const registerFromContract = async (req, res) => {
   try {
-    const { username, email, password, phone, full_name } = req.body;
+    const { username, email, password, phone, full_name, cccd, address } =
+      req.body;
 
     // Kiểm tra email đã tồn tại
     const existingUser = await executeQuery(
@@ -318,22 +319,57 @@ export const registerFromContract = async (req, res) => {
       });
     }
 
+    // Kiểm tra CCCD đã tồn tại chưa
+    if (cccd) {
+      const existingCccd = await executeQuery(
+        "SELECT * FROM users WHERE cccd = ? AND deleted_at IS NULL",
+        [cccd]
+      );
+
+      if (existingCccd.length > 0) {
+        return res.status(400).json({
+          message: "Số CCCD đã được sử dụng bởi tài khoản khác",
+        });
+      }
+    }
+
     // Mã hóa mật khẩu
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Thêm người dùng mới
-    const result = await executeQuery(
+    // Thêm người dùng mới với role tenant
+    const userResult = await executeQuery(
       `INSERT INTO users 
-        (username, password_hash, email, phone, full_name, role, created_at) 
-        VALUES (?, ?, ?, ?, ?, 'tenant', NOW())`,
-      [username, passwordHash, email, phone, full_name]
+        (username, password_hash, email, phone, full_name, cccd, role, status, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, 'tenant', true, NOW())`,
+      [username, passwordHash, email, phone, full_name, cccd]
     );
+
+    if (!userResult || !userResult.insertId) {
+      throw new Error("Không thể tạo tài khoản người dùng");
+    }
+
+    // Tạo tenant entry
+    try {
+      await executeQuery(
+        `INSERT INTO tenants 
+          (user_id, permanent_address, full_name, id_card_number, phone, status, created_at) 
+          VALUES (?, ?, ?, ?, ?, true, NOW())`,
+        [userResult.insertId, address || null, full_name, cccd, phone]
+      );
+    } catch (tenantError) {
+      console.error("Lỗi khi tạo tenant:", tenantError);
+      // Xóa user đã tạo nếu không tạo được tenant
+      await executeQuery("DELETE FROM users WHERE id = ?", [
+        userResult.insertId,
+      ]);
+      throw new Error("Không thể tạo thông tin người thuê");
+    }
 
     // Tạo token
     const token = jwt.sign(
       {
-        id: result.insertId,
+        id: userResult.insertId,
         username,
         role: "tenant",
       },
@@ -341,21 +377,14 @@ export const registerFromContract = async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Đăng ký thành công",
-      userId: result.insertId,
-      token, // Quan trọng: trả về token
+      userId: userResult.insertId,
+      token,
     });
-
-    // Tạo user_profile
-    await executeQuery(
-      `INSERT INTO user_profiles 
-        (user_id, address, identity_number, created_at)
-        VALUES (?, NULL, NULL, NOW())`,
-      [result.insertId]
-    );
   } catch (error) {
-    res.status(500).json({
+    console.error("Lỗi đăng ký:", error);
+    return res.status(500).json({
       message: "Lỗi đăng ký",
       error: error.message,
     });
@@ -741,7 +770,7 @@ export const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     // Kiểm tra mật khẩu hiện tại
-    const user = await executeQuery(
+    const [user] = await executeQuery(
       "SELECT password_hash FROM users WHERE id = ? AND deleted_at IS NULL",
       [userId]
     );
@@ -766,8 +795,17 @@ export const changePassword = async (req, res) => {
       [newPasswordHash, userId]
     );
 
-    res.json({ message: "Đổi mật khẩu thành công" });
+    // Tạo thông báo
+    await executeQuery(
+      `INSERT INTO notifications 
+        (user_id, type, title, content, related_id) 
+        VALUES (?, 'general', 'Đổi mật khẩu', ?, NULL)`,
+      [userId, "Mật khẩu của bạn đã được thay đổi thành công."]
+    );
+
+    res.json({ message: "Đổi mật khẩu thành công và thông báo đã được gửi!" });
   } catch (error) {
+    console.error("Lỗi khi đổi mật khẩu:", error);
     res.status(500).json({
       message: "Lỗi đổi mật khẩu",
       error: error.message,
@@ -792,6 +830,7 @@ export const deleteUser = async (req, res) => {
     });
   }
 };
+
 // Lấy danh sách thông báo
 export const getNotifications = async (req, res) => {
   try {
